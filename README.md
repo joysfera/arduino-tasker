@@ -1,16 +1,18 @@
 Tasker for Arduino
 ==================
 
-This is a cooperative scheduler for running multiple tasks on Arduino "at once".
+This is a cooperative scheduler for running multiple tasks on Arduino. The tasks are
+called automatically at specified times for specified number of times. This frees your
+program from timing logic and makes your Arduino look like it's doing several things at once.
 
-*Cooperative* means that the tasks you create need to behave well -
-to co-operate together by running for a short time only, otherwise it will not work.
-*Scheduler* means that when creating a task you schedule when it is to be
-started (in what time since now) and how many times it should be run
-(once, X times or forever).
+*Cooperative* means that the tasks you create need to behave nicely -
+to co-operate together by running for a short time only, otherwise it will not work well.
+*Scheduler* means that each task has its own schedule so Tasker knows when the tasks are to be
+started (in what time since now) and how many times they should be invoked
+(only once, X times or forever).
 
 The "co-operation" is best achieved by creating small, short running tasks.
-Basically wherever you'd need to include a <code>delay()</code> in your Arduino program
+Basically wherever you'd need to include the infamous *delay()* call in your Arduino program
 that's the place where you actually want to break the code flow, split
 the source code into separate functions and let Tasker run them as separate tasks.
 
@@ -29,9 +31,9 @@ illustrates the whole API and its best usage.
 How to use
 ----------
 
-1. place Tasker into your Arduino projects folder so it's in ./libraries/Tasker/Tasker.h
+1. create new **Tasker** folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in **./libraries/Tasker/Tasker.h**
 2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink
-3. see how easy it is to add three tasks and run them "at once"
+3. see how easy it is to add three tasks and run them all at once
 4. use that example as a basis for your own code
 
 Tasker API
@@ -89,6 +91,7 @@ Tasker API
 
 	void loop() {
 		tasker.loop();	// needs to be called as often as possible
+		// legacy code here
 	}
 ```
 
@@ -137,7 +140,7 @@ save the precious RAM (each slot takes 14 bytes of RAM).
 
 Good news is that Tasker automatically releases slots of finished tasks (those
 that were invoked by *setTimeout* or those that were run by *setRepeated* for their last time).
-That's why one can chain the tasks with a subsequent *setTimeout* calls from within
+That's why one can chain the tasks with *setTimeout* calls from within
 task function or even call one task using *setTimeout* recursively and the slots don't run out.
 
 Also, please be aware that the scheduled tasks cannot be stopped. This is
