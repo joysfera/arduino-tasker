@@ -57,9 +57,9 @@ Tasker API
   May pass the <code>optional_int</code> parameter into the called function.
 
 * <code>run()</code> when called it starts the Tasker scheduler and will never return.
-  Best to be called as the very last command of the Arduino's <code>setup()</code> function.
+  Best to be called as the very last command of the Arduino's <code>setup()</code> function:
 
-<code>
+```cpp
 	void setup() {
 		tasker.setInterval(...);
 		tasker.run();	// will not return
@@ -68,14 +68,14 @@ Tasker API
 	void loop() {
 		// unused, never called
 	}
-</code>
+```
 
 * optional: if you, for whatever reason, don't want to let the <code>Tasker.run()</code>
   govern all of your running code and wish to run Tasker together with some
   existing code you can omit the <code>run()</code> and call the <code>Tasker.loop()</code>
   repeatedly instead.
 
-<code>
+```cpp
 	void setup() {
 		tasker.setInterval(...);
 	}
@@ -83,7 +83,7 @@ Tasker API
 	void loop() {
 		tasker.loop();	// needs to be called as often as possible
 	}
-</code>
+```
 
 Task priorities
 ---------------
