@@ -18,7 +18,7 @@ There are many similar libraries for the same purpose available on the Internet
 but they are either buggy (don't handle timer overflow) or too complicated, cumbersome to use,
 unnecessary object-oriented or otherwise hard to understand and follow.
 
-This Tasker library is intentionally designed to be extremely simple
+This Tasker library is carefully designed to be extremely simple
 yet very powerful. It has short, clean API and clear implementation that fits
 on a single page and can be reviewed easily.
 Best of all, its API is intentionally similar to JavaScript's timer
@@ -32,7 +32,7 @@ How to use
 1. place Tasker into your Arduino projects folder so it's in ./libraries/Tasker/Tasker.h
 2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink
 3. see how easy it is to add three tasks and run them "at once"
-4. use that example as a base for your own code
+4. use that example as a basis for your own code
 
 Tasker API
 ----------
@@ -40,20 +40,27 @@ Tasker API
 * <code>Tasker([bool prioritized])</code>. The class constructor takes
   an optional bool flag (that is set to true if omitted). If this flag
   is TRUE then the Tasker prioritizes the scheduled tasks. If the flag
-  is FALSE then the Tasker considers all scheduled tasks equal.
+  is FALSE then the Tasker considers all scheduled tasks equal. More about priorities later.
+
+```cpp
+	Tasker tasker;        // creates prioritizing tasker
+	Tasker tasker(FALSE); // creates non-prioritizing tasker
+```
 
 * <code>setTimeout(function_name, time_in_milliseconds [, optional_int])</code>
-  Will call the <code>function_name</code> in <code>time_in_milliseconds</code> from now.
-  Will run it only once. May pass the <code>optional_int</code> parameter into the called function.
+  Will call the *function_name* in *time_in_milliseconds* from now.
+  Will run it only once. May pass the *optional_int* parameter into the called function.
+  When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
 * <code>setInterval(function_name, time_in_milliseconds [, optional_int])</code>
-  Will call the <code>function_name</code> repeatedly and forever, every
-  <code>time_in_milliseconds</code> from now on.
-  May pass the <code>optional_int</code> parameter into the called function.
+  Will call the *function_name* repeatedly and forever, every
+  *time_in_milliseconds* from now on.
+  May pass the *optional_int* parameter into the called function.
+  When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
-* <code>setRepeated(function_name, time_in_milliseconds, number_of_repeats [, optional_int])</code>
-  Will call the <code>function_name</code> repeatedly for <code>number_of_repeats</code>,
-  every <code>time_in_milliseconds</code> from now on.
+* <code>setRepeated(function_name, time, number_of_repeats [, optional_int])</code>
+  Will call the *function_name* repeatedly for *number_of_repeats*,
+  every *time* (in_milliseconds) from now on.
   May pass the <code>optional_int</code> parameter into the called function.
 
 * <code>run()</code> when called it starts the Tasker scheduler and will never return.
@@ -128,8 +135,13 @@ save the precious RAM (each slot takes 14 bytes of RAM).
 	#include "Tasker.h"
 ```
 
+Good news is that Tasker automatically releases slots of finished tasks (those
+that were invoked by *setTimeout* or those that were run by *setRepeated* for their last time).
+That's why one can chain the tasks with a subsequent *setTimeout* calls from within
+task function or even call one task using *setTimeout* recursively and the slots don't run out.
+
 Also, please be aware that the scheduled tasks cannot be stopped. This is
-intentional, well-thought-out design decision for this simple Tasker library.
+intentional, well balanced design decision for this simple Tasker library.
 You can always work around this limitation by adding the following condition
 as the first instruction in your task function:
 
