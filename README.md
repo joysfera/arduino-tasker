@@ -92,10 +92,12 @@ scheduler will prioritize the tasks in its queue. Tasks added later have lower
 priority than those added earlier. Thus you'll want to add your more
 important tasks first and the less important ones add afterwards.
 
+```cpp
 	Tasker tasker;
 	tasker.setInterval(most_important_fn, ..);
 	tasker.setInterval(less_important_fn, ..);
 	tasker.setInterval(least_important_fn, ..);
+```
 
 Normally, when there is enough time for calling each of the scheduled task
 at the right time the priorities don't play any role but when a previous task takes
@@ -107,10 +109,12 @@ If the priorities were disabled then the scheduler would simply run the next tas
 in its queue. If all your tasks are equally important you might want to disable
 the priorities by passing FALSE into the constructor:
 
+```cpp
 	Tasker tasker(false);
 	tasker.setInterval(fn, ..);
 	tasker.setInterval(equally_important_fn, ..);
 	tasker.setInterval(order_doesnt_matter_fn, ..);
+```
 
 Caveats
 -------
@@ -119,18 +123,22 @@ header file. By default there are 10 slots defined for up to ten tasks running
 simultaneously but you might want to increase this number - or even decrease, to
 save the precious RAM (each slot takes 14 bytes of RAM).
 
+```cpp
 	#define TASKER_MAX_TASKS 32
 	#include "Tasker.h"
+```
 
 Also, please be aware that the scheduled tasks cannot be stopped. This is
 intentional, well-thought-out design decision for this simple Tasker library.
 You can always work around this limitation by adding the following condition
 as the first instruction in your task function:
 
+```cpp
 	void a_task(int) {
 		if (should_be_stopped_flag) return;
 		...
 	}
+```
 
 I consider this library finished and stable for everyday use. Adding more features
 is not expected, the library will stay short, simple and fast.
