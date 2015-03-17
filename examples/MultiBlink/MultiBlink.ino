@@ -1,6 +1,6 @@
 /*
  * Example of usage of the Tasker for Arduino
- * Written by Petr Stehlik in 2015
+ * Written by Petr Stehlik  petr@pstehlik.cz
  * Released into the public domain
  */
 
@@ -9,26 +9,6 @@
 #include "Tasker.h"
 
 Tasker tasker;
-
-/*
- * Example of chaining tasks by calling the setTimeout()
- */
-void blink1(int /* unused */)
-{
-    byte pin = 13;
-    bool led = !digitalRead(pin);
-    digitalWrite(pin, led);
-    tasker.setTimeout(blink1, led ? 300 : 700);
-}
-
-/*
- * Example of one function called by two tasks - the 'pin'
- * input variable's value is defined when creating the tasks
- */ 
-void blink2(int pin)
-{
-    digitalWrite(pin, !digitalRead(pin));
-}
 
 void setup()
 {
@@ -48,4 +28,24 @@ void setup()
 
 void loop()
 {
+}
+
+/*
+ * Example of chaining tasks by calling the setTimeout() from a task
+ */
+void blink1(int /* unused */)
+{
+    byte pin = 13;
+    bool led = !digitalRead(pin);
+    digitalWrite(pin, led);
+    tasker.setTimeout(blink1, led ? 300 : 700);
+}
+
+/*
+ * Example of one function called by two tasks - the 'pin'
+ * input value is defined when creating the tasks
+ */
+void blink2(int pin)
+{
+    digitalWrite(pin, !digitalRead(pin));
 }
