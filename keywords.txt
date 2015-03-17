@@ -1,0 +1,6 @@
+Tasker		KEYWORD1
+
+setTimeout	KEYWORD2
+setInterval	KEYWORD2
+setRepeated	KEYWORD2
+TASKER_MAX_TASKS	KEYWORD2
