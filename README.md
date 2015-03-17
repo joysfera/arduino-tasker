@@ -10,19 +10,19 @@ started (in what time since now) and how many times it should be run
 (once, X times or forever).
 
 The "co-operation" is best achieved by creating small, short running tasks.
-Basically wherever you'd like include a <code>delay()</code> in your Arduino program
+Basically wherever you'd need to include a <code>delay()</code> in your Arduino program
 that's the place where you actually want to break the code flow, split
-the source code into separate functions and let them run as separate tasks.
+the source code into separate functions and let Tasker run them as separate tasks.
 
-There are many similar libraries for the same purpose but they are either
-buggy (don't handle timer overflow) or too complicated, cumbersome to use,
+There are many similar libraries for the same purpose available on the Internet
+but they are either buggy (don't handle timer overflow) or too complicated, cumbersome to use,
 unnecessary object-oriented or otherwise hard to understand and follow.
 
 This Tasker library is intentionally designed to be extremely simple
-yet very powerful. It has a short, clean API and clear implementation that fits
+yet very powerful. It has short, clean API and clear implementation that fits
 on a single page and can be reviewed easily.
 Best of all, its API is intentionally similar to JavaScript's timer
-functions so HTML/JavaScript programmers will feel at home immediately.
+functions so HTML/JavaScript programmers will feel right at home.
 For the unfamiliar with JavaScript there's a short example code included that
 illustrates the whole API and its best usage.
 
