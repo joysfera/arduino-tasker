@@ -50,20 +50,20 @@ Tasker API
 ```
 
 * <code>setTimeout(function_name, time_in_milliseconds [, optional_int])</code>
-  Will call the *function_name* in *time_in_milliseconds* from now.
-  Will run it only once. May pass the *optional_int* parameter into the called function.
+  Tasker will call the *function_name* in *time_in_milliseconds* from now.
+  It will run the function only once. May pass the *optional_int* parameter into the called function.
   When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
 * <code>setInterval(function_name, time_in_milliseconds [, optional_int])</code>
-  Will call the *function_name* repeatedly and forever, every
+  Tasker will call the *function_name* repeatedly and forever, every
   *time_in_milliseconds* from now on.
   May pass the *optional_int* parameter into the called function.
-  When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
 * <code>setRepeated(function_name, time, number_of_repeats [, optional_int])</code>
-  Will call the *function_name* repeatedly for *number_of_repeats*,
+  Tasker will call the *function_name* repeatedly for *number_of_repeats*,
   every *time* (in_milliseconds) from now on.
   May pass the <code>optional_int</code> parameter into the called function.
+  When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
 * <code>run()</code> when called it starts the Tasker scheduler and will never return.
   Best to be called as the very last command of the Arduino's <code>setup()</code> function:
