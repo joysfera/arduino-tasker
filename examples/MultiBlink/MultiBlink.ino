@@ -10,6 +10,26 @@
 
 Tasker tasker;
 
+/*
+ * Example of chaining tasks by calling the setTimeout() from a task
+ */
+void blink1(int /* unused */)
+{
+    byte pin = 13;
+    bool led = !digitalRead(pin);
+    digitalWrite(pin, led);
+    tasker.setTimeout(blink1, led ? 300 : 700);
+}
+
+/*
+ * Example of one function called by two tasks - the 'pin'
+ * input value is defined when creating the tasks
+ */
+void blink2(int pin)
+{
+    digitalWrite(pin, !digitalRead(pin));
+}
+
 void setup()
 {
     pinMode(13, OUTPUT);  // default Arduino LED
@@ -30,22 +50,3 @@ void loop()
 {
 }
 
-/*
- * Example of chaining tasks by calling the setTimeout() from a task
- */
-void blink1(int /* unused */)
-{
-    byte pin = 13;
-    bool led = !digitalRead(pin);
-    digitalWrite(pin, led);
-    tasker.setTimeout(blink1, led ? 300 : 700);
-}
-
-/*
- * Example of one function called by two tasks - the 'pin'
- * input value is defined when creating the tasks
- */
-void blink2(int pin)
-{
-    digitalWrite(pin, !digitalRead(pin));
-}
