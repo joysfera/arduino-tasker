@@ -1,6 +1,6 @@
 /*
- * Tasker for Arduino - cooperative task scheduler
- * Copyright (c) 2015  Petr Stehlik  petr@pstehlik.cz
+ * Tasker for Arduino - cooperative task scheduler with Javascript like API
+ * Copyleft (c) 2015-2017  Petr Stehlik  petr@pstehlik.cz
  * Distributed under the GNU LGPL http://www.gnu.org/licenses/lgpl.txt
  */
 
