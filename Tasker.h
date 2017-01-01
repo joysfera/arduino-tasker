@@ -82,6 +82,7 @@ void Tasker::loop(void)
 				t_count--;
 				inc = false;
 			}
+			yield();
 			if (t_prioritized)
 				break;
 			now = millis();
