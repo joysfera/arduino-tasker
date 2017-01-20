@@ -8,9 +8,5 @@
     "url": "https://github.com/joysfera/arduino-tasker"
   },
   "frameworks": "arduino",
-  "platforms":
-  [
-    "atmelavr",
-    "teensy"
-  ]
+  "platforms": "*"
 }
