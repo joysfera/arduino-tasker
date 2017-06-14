@@ -4,8 +4,11 @@
  * Distributed under the GNU LGPL http://www.gnu.org/licenses/lgpl.txt
  */
 
+#ifndef _tasker_h
+#define _tasker_h
+
 #ifndef TASKER_MAX_TASKS
-#define TASKER_MAX_TASKS	10	/* max 254 entries, one occupies 14 bytes of RAM */
+#define TASKER_MAX_TASKS 10 // max 254 entries, one occupies 14 bytes of RAM
 #endif
 
 #include "Arduino.h"
@@ -92,3 +95,4 @@ void Tasker::loop(void)
 	}
 }
 
+#endif // _tasker_h
