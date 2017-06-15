@@ -28,6 +28,11 @@ functions so HTML/JavaScript programmers will feel right at home.
 For the unfamiliar with JavaScript there's a short example code included that
 illustrates the whole API and its best usage.
 
+ChangeLog
+---------
+* version 1.1 adds clear example of DS18B20 handling
+* version 1.2 adds optional priorities when defining tasks
+
 How to use
 ----------
 
@@ -49,17 +54,17 @@ Tasker API
 	Tasker tasker(FALSE); // creates non-prioritizing tasker
 ```
 
-* <code>setTimeout(function_name, time_in_milliseconds [, optional_int])</code>
+* <code>setTimeout(function_name, time_in_milliseconds [, optional_int [, optional_priority]])</code>
   Tasker will call the *function_name* in *time_in_milliseconds* from now.
   It will run the function only once. May pass the *optional_int* parameter into the called function.
   When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
-* <code>setInterval(function_name, time_in_milliseconds [, optional_int])</code>
+* <code>setInterval(function_name, time_in_milliseconds [, optional_int [, optional_priority]])</code>
   Tasker will call the *function_name* repeatedly and forever, every
   *time_in_milliseconds* from now on.
   May pass the *optional_int* parameter into the called function.
 
-* <code>setRepeated(function_name, time, number_of_repeats [, optional_int])</code>
+* <code>setRepeated(function_name, time, number_of_repeats [, optional_int [, optional_priority]])</code>
   Tasker will call the *function_name* repeatedly for *number_of_repeats*,
   every *time* (in_milliseconds) from now on.
   May pass the <code>optional_int</code> parameter into the called function.
@@ -99,14 +104,14 @@ Task priorities
 ---------------
 If the Tasker constructor was not called with a FALSE flag then the internal
 scheduler will prioritize the tasks in its queue. Tasks added later have lower
-priority than those added earlier. Thus you'll want to add your more
-important tasks first and the less important ones add afterwards.
+priority than those added earlier, unless you specify their priority with
+optional parameter: the lower its value the higher priority, 0 = highest priority.
 
 ```cpp
 	Tasker tasker;
 	tasker.setInterval(most_important_fn, ..);
 	tasker.setInterval(less_important_fn, ..);
-	tasker.setInterval(least_important_fn, ..);
+	tasker.setInterval(highest_priority_fn, .., .., 0);
 ```
 
 Normally, when there is enough time for calling each of the scheduled task
@@ -114,7 +119,7 @@ at the right time the priorities don't play any role but when a previous task ta
 longer time and the scheduler detects that certain tasks are delayed
 (are behind their schedule) it needs to decide which task will get run of those
 that should have been run already. And that's where the tasks' priorities step
-in: the task added earlier (= with a higher priority) will be chosen.
+in: the task added earlier or with a higher priority will be chosen.
 If the priorities were disabled then the scheduler would simply run the next task
 in its queue. If all your tasks are equally important you might want to disable
 the priorities by passing FALSE into the constructor:
@@ -158,8 +163,10 @@ as the first instruction in your task function:
 I consider this library finished and stable for everyday use. Adding more features
 is not expected, the library will stay short, simple and fast.
 
-Enjoy
-
+Author
+------
 Petr Stehlík
 
-http://joysfera.blogspot.com/ with link to my G+ profile and contact information.
+petr@pstehlik.cz
+http://joysfera.blogspot.com/
+https://plus.google.com/+PetrStehl%C3%ADk

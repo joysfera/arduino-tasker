@@ -19,9 +19,9 @@ class Tasker
 {
 public:
 	Tasker(bool prioritized = true);
-	bool setTimeout(TaskCallback func, unsigned long interval, int param = 0);
-	bool setInterval(TaskCallback func, unsigned long interval, int param = 0);
-	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0);
+	bool setTimeout(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
+	bool setInterval(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
+	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0, byte prio = TASKER_MAX_TASKS);
 	void loop(void);
 	void run(void) { while(true) { loop(); yield(); } }
 private:
@@ -45,21 +45,24 @@ Tasker::Tasker(bool prioritized)
 	t_prioritized = prioritized;
 }
 
-bool Tasker::setTimeout(TaskCallback func, unsigned long interval, int param)
+bool Tasker::setTimeout(TaskCallback func, unsigned long interval, int param, byte prio)
 {
-	return setRepeated(func, interval, 1, param);
+	return setRepeated(func, interval, 1, param, prio);
 }
 
-bool Tasker::setInterval(TaskCallback func, unsigned long interval, int param)
+bool Tasker::setInterval(TaskCallback func, unsigned long interval, int param, byte prio)
 {
-	return setRepeated(func, interval, 0, param);
+	return setRepeated(func, interval, 0, param, prio);
 }
 
-bool Tasker::setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param)
+bool Tasker::setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param, byte prio)
 {
 	if (t_count >= TASKER_MAX_TASKS || interval == 0)
 		return false;
-	TASK &t = tasks[t_count];
+	byte pos = (prio < t_count) ? prio : t_count;
+	if (pos < t_count)
+		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
+	TASK &t = tasks[pos];
 	t.call = func;
 	t.interval = interval;
 	t.param = param;
