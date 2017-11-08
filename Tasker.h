@@ -24,6 +24,12 @@ public:
 	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0, byte prio = TASKER_MAX_TASKS);
 	void loop(void);
 	void run(void) { while(true) { loop(); yield(); } }
+
+  void changeInterval(TaskCallback func, unsigned long interval);
+  void resetCountdown(TaskCallback func);
+  void cancel(TaskCallback func);
+  uint8_t isScheduled(TaskCallback func);
+
 private:
 	struct TASK {
 		TaskCallback call;
@@ -96,6 +102,50 @@ void Tasker::loop(void)
 		if (inc)
 			t_idx++;
 	}
+}
+
+void Tasker::changeInterval(TaskCallback func, unsigned long interval) {
+  for (uint8_t i = 0; i < t_count; i++) {
+    TASK *t = &tasks[i];
+    if (t->call == func) {
+      t->interval = interval;
+      return;
+    }
+  }
+}
+
+void Tasker::resetCountdown(TaskCallback func) {
+  for (uint8_t i = 0; i < t_count; i++) {
+    TASK *t = &tasks[i];
+    if (t->call == func) {
+      t->lastRun = millis();
+      return;
+    }
+  }
+}
+
+void Tasker::cancel(TaskCallback func) {
+  for (uint8_t i = 0; i < t_count; i++) {
+    TASK *t = &tasks[i];
+
+    if (t->call == func) {
+      // drop the this task by removing its slot
+      memmove(tasks + i, tasks + i + 1, sizeof(TASK) * (t_count - i - 1));
+      return;
+    }
+  }
+}
+
+uint8_t Tasker::isScheduled(TaskCallback func) {
+  for (uint8_t i = 0; i < t_count; i++) {
+      TASK *t = &tasks[i];
+
+      if (t->call == func) {
+        return 1;
+      }
+    }
+
+  return 0;
 }
 
 #endif // _tasker_h
