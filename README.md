@@ -40,9 +40,9 @@ ChangeLog
 How to use
 ----------
 
-1. create new **Tasker** folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in **./libraries/Tasker/Tasker.h**
-2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink
-3. see how easy it is to add three tasks and run them all at once
+1. create new **Tasker** folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in **./libraries/Tasker/Tasker.h** or **install from Arduino Library Manager**
+2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink (or other examples found there)
+3. see how easy it is to add three tasks and run them all at once (or read the DS18B20 without waiting)
 4. use that example as a basis for your own code
 
 Tasker API
@@ -78,12 +78,8 @@ Tasker API
   Best to be called as often as possible, ideally in the Arduino's <code>loop()</code> function:
 
 ```cpp
-	void setup() {
-		tasker.setInterval(...);
-	}
-
 	void loop() {
-		tasker.loop();	// needs to be called as often as possible
+		tasker.loop();
 	}
 ```
 
@@ -154,6 +150,10 @@ Author
 ------
 Petr Stehlík
 
-petr@pstehlik.cz
-http://joysfera.blogspot.com/
-https://plus.google.com/+PetrStehl%C3%ADk
+E-mail: petr@pstehlik.cz
+
+Daily active on Google+: https://plus.google.com/+PetrStehl%C3%ADk
+
+Longer articles published at blog: http://joysfera.blogspot.com/
+
+Sometimes tweets as @joysfera
