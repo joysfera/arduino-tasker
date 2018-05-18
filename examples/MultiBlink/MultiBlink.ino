@@ -42,11 +42,10 @@ void setup()
     tasker.setInterval(blink2, 750, 12);
     // called every 1000 milliseconds 10 times, with optional parameter pin = 11
     tasker.setRepeated(blink2, 1000, 10, 11);
-
-    tasker.run(); // never returns
 }
 
 void loop()
 {
+    tasker.loop();
 }
 

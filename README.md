@@ -12,7 +12,7 @@ started (in what time since now) and how many times they should be invoked
 (only once, X times or forever).
 
 The "co-operation" is best achieved by creating small, short running tasks.
-Basically wherever you'd need to include the infamous *delay()* call in your Arduino program
+Basically wherever you'd need to include the infamous <code>delay()</code> call in your Arduino program
 that's the place where you actually want to break the code flow, split
 the source code into separate functions and let Tasker run them as separate tasks.
 
@@ -31,7 +31,11 @@ illustrates the whole API and its best usage.
 ChangeLog
 ---------
 * version 1.1 adds clear example of DS18B20 handling
+
 * version 1.2 adds optional priorities when defining tasks
+
+* version 1.3 removes the <code>run()</code> function - please call <code>tasker.loop()</code> in your Arduino <code>loop()</code> function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the <code>loop()</code> to be running for it. It also allowed me to remove the <code>yield()</code> call that didn't really bring anything but issues in compiling on some platforms.
+
 
 How to use
 ----------
@@ -70,24 +74,8 @@ Tasker API
   May pass the <code>optional_int</code> parameter into the called function.
   When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
-* <code>run()</code> when called it starts the Tasker scheduler and will never return.
-  Best to be called as the very last command of the Arduino's <code>setup()</code> function:
-
-```cpp
-	void setup() {
-		tasker.setInterval(...);
-		tasker.run();	// will not return
-	}
-
-	void loop() {
-		// unused, never called
-	}
-```
-
-* optional: if you, for whatever reason, don't want to let the <code>Tasker.run()</code>
-  govern all of your running code and wish to run Tasker together with some
-  existing code you can omit the <code>run()</code> and call the <code>Tasker.loop()</code>
-  repeatedly instead.
+* <code>loop()</code> when called it runs the Tasker scheduler and process all waiting tasks, then ends.
+  Best to be called as often as possible, ideally in the Arduino's <code>loop()</code> function:
 
 ```cpp
 	void setup() {
@@ -96,7 +84,6 @@ Tasker API
 
 	void loop() {
 		tasker.loop();	// needs to be called as often as possible
-		// legacy code here
 	}
 ```
 

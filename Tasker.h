@@ -23,7 +23,6 @@ public:
 	bool setInterval(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
 	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0, byte prio = TASKER_MAX_TASKS);
 	void loop(void);
-	void run(void) { while(true) { loop(); yield(); } }
 private:
 	struct TASK {
 		TaskCallback call;
@@ -90,7 +89,6 @@ void Tasker::loop(void)
 			}
 			if (t_prioritized)
 				break;
-			yield();
 			now = millis();
 		}
 		if (inc)

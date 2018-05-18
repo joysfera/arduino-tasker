@@ -29,7 +29,8 @@ void setup() {
     sensor.setWaitForConversion(false);
     // read temperature every 5 seconds
     tasker.setInterval(startConversion, 5000);
-    tasker.run();
 }
 
-void loop() { }
+void loop() {
+    tasker.loop();
+}
