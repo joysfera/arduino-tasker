@@ -1,6 +1,6 @@
 /*
  * Tasker for Arduino - cooperative task scheduler with Javascript like API
- * Copyleft (c) 2015-2017  Petr Stehlik  petr@pstehlik.cz
+ * Copyleft (c) 2015-2018  Petr Stehlik  petr@pstehlik.cz
  * Distributed under the GNU LGPL http://www.gnu.org/licenses/lgpl.txt
  */
 
@@ -18,11 +18,14 @@ typedef void (*TaskCallback)(int);
 class Tasker
 {
 public:
-	Tasker(bool prioritized = true);
+	Tasker(bool prioritized = false);
 	bool setTimeout(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
 	bool setInterval(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
 	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0, byte prio = TASKER_MAX_TASKS);
 	void loop(void);
+	bool isPrioritized() { return t_prioritized; }
+	void setPrioritized(bool prioritized) { t_prioritized = prioritized; }
+
 private:
 	struct TASK {
 		TaskCallback call;

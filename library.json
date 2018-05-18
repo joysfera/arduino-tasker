@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/joysfera/arduino-tasker"
   },
-  "version": "1.2",
+  "version": "1.4",
   "frameworks": "arduino",
   "platforms": "*"
 }

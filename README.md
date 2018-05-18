@@ -30,11 +30,13 @@ illustrates the whole API and its best usage.
 
 ChangeLog
 ---------
-* version 1.1 adds clear example of DS18B20 handling
+* version 1.4 changes the default priority value when <code>Tasker</code> is instantiated without the optional parameter. In previous versions the priority was enabled, now it is disabled. I (and also other users of **Tasker**) found the prioritized handling of tasks rather counter-intuitive because it could happen almost randomly that some tasks were sometimes not executed at all (when a higher priority task ran for too long). Whoever wants to keep the original behaviour please instantiate Tasker like this: <code>Tasker tasker(TRUE);</code>. There are also two new functions that help to query or set the priority value: <code>isPrioritized()</code> and <code>setPrioritized(bool)</code>.
+
+* version 1.3 removes the <code>run()</code> function - please call <code>tasker.loop()</code> in your Arduino <code>loop()</code> function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the <code>loop()</code> to be running for it. It also allowed me to remove the <code>yield()</code> call that didn't really bring anything but issues in compiling on some platforms.
 
 * version 1.2 adds optional priorities when defining tasks
 
-* version 1.3 removes the <code>run()</code> function - please call <code>tasker.loop()</code> in your Arduino <code>loop()</code> function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the <code>loop()</code> to be running for it. It also allowed me to remove the <code>yield()</code> call that didn't really bring anything but issues in compiling on some platforms.
+* version 1.1 adds clear example of DS18B20 handling
 
 
 How to use
@@ -49,13 +51,13 @@ Tasker API
 ----------
 
 * <code>Tasker([bool prioritized])</code>. The class constructor takes
-  an optional bool flag (that is set to true if omitted). If this flag
+  an optional bool flag (that is set to false if omitted). If this flag
   is TRUE then the Tasker prioritizes the scheduled tasks. If the flag
   is FALSE then the Tasker considers all scheduled tasks equal. More about priorities later.
 
 ```cpp
-	Tasker tasker;        // creates prioritizing tasker
-	Tasker tasker(FALSE); // creates non-prioritizing tasker
+	Tasker tasker;        // creates non-prioritizing tasker
+	Tasker tasker(TRUE);  // creates prioritizing tasker
 ```
 
 * <code>setTimeout(function_name, time_in_milliseconds [, optional_int [, optional_priority]])</code>
@@ -83,32 +85,31 @@ Tasker API
 	}
 ```
 
-Task priorities
----------------
-If the Tasker constructor was not called with a FALSE flag then the internal
+Task priorities (optional)
+--------------------------
+If the Tasker constructor was called with a parameter (TRUE) then the internal
 scheduler will prioritize the tasks in its queue. Tasks added later have lower
 priority than those added earlier, unless you specify their priority with
 optional parameter: the lower its value the higher priority, 0 = highest priority.
 
 ```cpp
-	Tasker tasker;
-	tasker.setInterval(most_important_fn, ..);
-	tasker.setInterval(less_important_fn, ..);
-	tasker.setInterval(highest_priority_fn, .., .., 0);
+	Tasker tasker(TRUE);
+	tasker.setInterval(most_important_fn, ..); // formerly added calls have automatically higher priority
+	tasker.setInterval(less_important_fn, ..); // the later added calls the lower priority they have
+	tasker.setInterval(highest_priority_fn, .., .., 0); // unless you specify the priority explicitly by the last parameter
 ```
 
 Normally, when there is enough time for calling each of the scheduled task
 at the right time the priorities don't play any role but when a previous task takes
 longer time and the scheduler detects that certain tasks are delayed
-(are behind their schedule) it needs to decide which task will get run of those
+(are behind their schedule) it needs to decide which task will be run of those
 that should have been run already. And that's where the tasks' priorities step
 in: the task added earlier or with a higher priority will be chosen.
-If the priorities were disabled then the scheduler would simply run the next task
-in its queue. If all your tasks are equally important you might want to disable
-the priorities by passing FALSE into the constructor:
+If the priorities were disabled (by default the are) then the scheduler would simply run the next task
+in its queue. If all your tasks are equally important (they most probably are) you might simply ignore the whole idea of priorities and their implementation.
 
 ```cpp
-	Tasker tasker(false);
+	Tasker tasker;
 	tasker.setInterval(fn, ..);
 	tasker.setInterval(equally_important_fn, ..);
 	tasker.setInterval(order_doesnt_matter_fn, ..);
@@ -152,8 +153,10 @@ Petr Stehlík
 
 E-mail: petr@pstehlik.cz
 
+Web: https://www.pstehlik.cz/
+
 Daily active on Google+: https://plus.google.com/+PetrStehl%C3%ADk
 
-Longer articles published at blog: http://joysfera.blogspot.com/
+Longer articles are published at blog: http://joysfera.blogspot.com/
 
-Sometimes tweets as @joysfera
+Sometimes tweets as https://twitter.com/joysfera

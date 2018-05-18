@@ -4,4 +4,7 @@ setTimeout	KEYWORD2
 setInterval	KEYWORD2
 setRepeated	KEYWORD2
 loop		KEYWORD2
+isPrioritized	KEYWORD2
+setPrioritized	KEYWORD2
+
 TASKER_MAX_TASKS	LITERAL1
