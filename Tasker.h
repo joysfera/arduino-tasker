@@ -22,6 +22,9 @@ public:
 	bool setTimeout(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
 	bool setInterval(TaskCallback func, unsigned long interval, int param = 0, byte prio = TASKER_MAX_TASKS);
 	bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, int param = 0, byte prio = TASKER_MAX_TASKS);
+	bool cancel(TaskCallback func, int param = 0);
+	bool clearTimeout(TaskCallback func, int param = 0) { cancel(func, param); };
+	bool clearInterval(TaskCallback func, int param = 0) { cancel(func, param); };
 	void loop(void);
 	bool isPrioritized() { return t_prioritized; }
 	void setPrioritized(bool prioritized) { t_prioritized = prioritized; }
@@ -34,6 +37,9 @@ private:
 		unsigned long lastRun;
 		unsigned int repeat;
 	};
+
+	int findTask(TaskCallback func, int param);
+	bool removeTask(int t_idx);
 
 	TASK tasks[TASKER_MAX_TASKS];
 	byte t_count;
@@ -86,8 +92,7 @@ void Tasker::loop(void)
 			(*(t.call))(t.param);
 			if (t.repeat > 0 && --t.repeat == 0) {
 				// drop the finished task by removing its slot
-				memmove(tasks+t_idx, tasks+t_idx+1, sizeof(TASK)*(t_count-t_idx-1));
-				t_count--;
+				removeTask(t_idx);
 				inc = false;
 			}
 			if (t_prioritized)
@@ -97,6 +102,31 @@ void Tasker::loop(void)
 		if (inc)
 			t_idx++;
 	}
+}
+
+bool Tasker::cancel(TaskCallback func, int param)
+{
+	return removeTask(findTask(func, param));
+}
+
+int Tasker::findTask(TaskCallback func, int param)
+{
+	for(byte t_idx = 0; t_idx < t_count; t_idx++) {
+		TASK &t = tasks[t_idx];
+		if (t.call == func && t.param == param)
+			return t_idx;
+	}
+	return -1;
+}
+
+inline bool Tasker::removeTask(int t_idx)
+{
+	if (t_idx >= 0 && t_idx < t_count) {
+		memmove(tasks+t_idx, tasks+t_idx+1, sizeof(TASK)*(t_count-t_idx-1));
+		t_count--;
+		return true;
+	}
+	return false;
 }
 
 #endif // _tasker_h

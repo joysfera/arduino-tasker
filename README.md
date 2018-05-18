@@ -30,6 +30,8 @@ illustrates the whole API and its best usage.
 
 ChangeLog
 ---------
+* version 1.5 adds an important feature that some users have been asking for: now you can stop/cancel/remove a scheduled task by calling the new function <code>cancel()</code>. If you want to stick with the familiar Javascript API then you can call <code>clearTimeout()</code> or <code>clearInterval()</code> functions instead (they are identical with the <code>cancel()</code>).
+
 * version 1.4 changes the default priority value when <code>Tasker</code> is instantiated without the optional parameter. In previous versions the priority was enabled, now it is disabled. I (and also other users of **Tasker**) found the prioritized handling of tasks rather counter-intuitive because it could happen almost randomly that some tasks were sometimes not executed at all (when a higher priority task ran for too long). Whoever wants to keep the original behaviour please instantiate Tasker like this: <code>Tasker tasker(TRUE);</code>. There are also two new functions that help to query or set the priority value: <code>isPrioritized()</code> and <code>setPrioritized(bool)</code>.
 
 * version 1.3 removes the <code>run()</code> function - please call <code>tasker.loop()</code> in your Arduino <code>loop()</code> function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the <code>loop()</code> to be running for it. It also allowed me to remove the <code>yield()</code> call that didn't really bring anything but issues in compiling on some platforms.
@@ -44,7 +46,7 @@ How to use
 
 1. create new **Tasker** folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in **./libraries/Tasker/Tasker.h** or **install from Arduino Library Manager**
 2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink (or other examples found there)
-3. see how easy it is to add three tasks and run them all at once (or read the DS18B20 without waiting)
+3. see how easy it is to add three tasks and run them all at once (or how to read the DS18B20 without waiting)
 4. use that example as a basis for your own code
 
 Tasker API
@@ -76,8 +78,22 @@ Tasker API
   May pass the <code>optional_int</code> parameter into the called function.
   When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
+* <code>cancel(function_name [, optional_int ])</code>
+  If Tasker has the *function_name* in its scheduler queue (added there by either of those three functions above)
+  it will cancel any further execution of the function and will remove it from its scheduler queue instantly.
+  Its Tasker slot is made available for new tasks, of course.
+  If you happened to add certain *function_name* to Tasker several times with different optional int parameters
+  then you can append the same optional int parameter when calling the <code>cancel()</code> so that Tasker
+  knows which of the several task slots with the same *function_name* to remove.
+
+* <code>clearTimeout(function_name [, optional_int ])</code> is identical to <code>cancel()</code>, it just
+  uses the well known Javascript API.
+
+* <code>clearInterval(function_name [, optional_int ])</code> is identical to <code>cancel()</code>, it just
+  uses the well known Javascript API.
+
 * <code>loop()</code> when called it runs the Tasker scheduler and process all waiting tasks, then ends.
-  Best to be called as often as possible, ideally in the Arduino's <code>loop()</code> function:
+  It's best to let your program call this Tasker function as often as possible, ideally in the Arduino's <code>loop()</code> function:
 
 ```cpp
 	void loop() {
@@ -131,18 +147,6 @@ Good news is that Tasker automatically releases slots of finished tasks (those
 that were invoked by *setTimeout* or those that were run by *setRepeated* for their last time).
 That's why one can chain the tasks with *setTimeout* calls from within
 task function or even call one task using *setTimeout* recursively and the slots don't run out.
-
-Also, please be aware that the scheduled tasks cannot be stopped. This is
-intentional, well balanced design decision for this simple Tasker library.
-You can always work around this limitation by adding the following condition
-as the first instruction in your task function:
-
-```cpp
-	void a_task(int) {
-		if (should_be_stopped_flag) return;
-		...
-	}
-```
 
 I consider this library finished and stable for everyday use. Adding more features
 is not expected, the library will stay short, simple and fast.

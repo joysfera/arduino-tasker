@@ -1,13 +1,13 @@
 {
   "name": "Tasker",
   "keywords": "task",
-  "description": "Allows to schedule tasks to be called once, repeatedly or indefinitely in a given time frame. Features simple javascript-like syntax. Does not use any timers, relies on cooperative multitasking. The whole implementation fits on a single page.",
+  "description": "Allows to schedule tasks (your functions) to be called once, repeatedly or indefinitely in a given time frame. Features simple and familiar Javascript-like syntax. Does not use any hardware timers, relies on cooperative multitasking. Clean, simple and highly portable.",
   "repository":
   {
     "type": "git",
     "url": "https://github.com/joysfera/arduino-tasker"
   },
-  "version": "1.4",
+  "version": "1.5",
   "frameworks": "arduino",
   "platforms": "*"
 }
