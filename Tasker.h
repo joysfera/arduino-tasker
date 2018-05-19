@@ -53,6 +53,7 @@ private:
 
 	int findTask(TaskCallback0 func);
 	int findTask(TaskCallback1 func, int param);
+	bool addTask(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio);
 	bool removeTask(int t_idx);
 
 	TASK tasks[TASKER_MAX_TASKS];
@@ -79,19 +80,7 @@ bool Tasker::setInterval(TaskCallback0 func, unsigned long interval, byte prio)
 
 bool Tasker::setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio)
 {
-	if (t_count >= TASKER_MAX_TASKS || interval == 0)
-		return false;
-	byte pos = (prio < t_count) ? prio : t_count;
-	if (pos < t_count)
-		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
-	TASK &t = tasks[pos];
-	t.call0 = func;
-	t.interval = interval;
-	t.param = -1;
-	t.lastRun = millis();
-	t.repeat = repeat;
-	t_count++;
-	return true;
+	return addTask((TaskCallback1)func, interval, repeat, -1, prio);
 }
 
 bool Tasker::setTimeout(TaskCallback1 func, unsigned long interval, int param, byte prio)
@@ -106,19 +95,7 @@ bool Tasker::setInterval(TaskCallback1 func, unsigned long interval, int param, 
 
 bool Tasker::setRepeated(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
 {
-	if (t_count >= TASKER_MAX_TASKS || interval == 0)
-		return false;
-	byte pos = (prio < t_count) ? prio : t_count;
-	if (pos < t_count)
-		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
-	TASK &t = tasks[pos];
-	t.call1 = func;
-	t.interval = interval;
-	t.param = param;
-	t.lastRun = millis();
-	t.repeat = repeat;
-	t_count++;
-	return true;
+	return addTask(func, interval, repeat, abs(param), prio);
 }
 
 void Tasker::loop(void)
@@ -155,12 +132,7 @@ bool Tasker::cancel(TaskCallback0 func)
 
 int Tasker::findTask(TaskCallback0 func)
 {
-	for(byte t_idx = 0; t_idx < t_count; t_idx++) {
-		TASK &t = tasks[t_idx];
-		if (t.call0 == func)
-			return t_idx;
-	}
-	return -1;
+	return findTask((TaskCallback1)func, -1);
 }
 
 bool Tasker::cancel(TaskCallback1 func, int param)
@@ -176,6 +148,23 @@ int Tasker::findTask(TaskCallback1 func, int param)
 			return t_idx;
 	}
 	return -1;
+}
+
+bool Tasker::addTask(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
+{
+	if (t_count >= TASKER_MAX_TASKS || interval == 0)
+		return false;
+	byte pos = (prio < t_count) ? prio : t_count;
+	if (pos < t_count)
+		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
+	TASK &t = tasks[pos];
+	t.call1 = func;
+	t.interval = interval;
+	t.param = param;
+	t.lastRun = millis();
+	t.repeat = repeat;
+	t_count++;
+	return true;
 }
 
 bool Tasker::removeTask(int t_idx)
