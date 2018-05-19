@@ -22,17 +22,21 @@ public:
 	Tasker(bool prioritized = false);
 
 	bool setTimeout(TaskCallback0 func, unsigned long interval, byte prio = TASKER_MAX_TASKS);
-	bool setInterval(TaskCallback0 func, unsigned long interval, byte prio = TASKER_MAX_TASKS);
-	bool setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio = TASKER_MAX_TASKS);
-	bool cancel(TaskCallback0 func);
-	bool clearTimeout(TaskCallback0 func) { cancel(func); };
-	bool clearInterval(TaskCallback0 func) { cancel(func); };
-
 	bool setTimeout(TaskCallback1 func, unsigned long interval, int param, byte prio = TASKER_MAX_TASKS);
+
+	bool setInterval(TaskCallback0 func, unsigned long interval, byte prio = TASKER_MAX_TASKS);
 	bool setInterval(TaskCallback1 func, unsigned long interval, int param, byte prio = TASKER_MAX_TASKS);
+
+	bool setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio = TASKER_MAX_TASKS);
 	bool setRepeated(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio = TASKER_MAX_TASKS);
+
+	bool cancel(TaskCallback0 func);
 	bool cancel(TaskCallback1 func, int param);
+
+	bool clearTimeout(TaskCallback0 func) { cancel(func); };
 	bool clearTimeout(TaskCallback1 func, int param) { cancel(func, param); };
+
+	bool clearInterval(TaskCallback0 func) { cancel(func); };
 	bool clearInterval(TaskCallback1 func, int param) { cancel(func, param); };
 
 	void loop(void);
@@ -41,10 +45,7 @@ public:
 
 private:
 	struct TASK {
-		union {
-			TaskCallback0 call0;
-			TaskCallback1 call1;
-		};
+		TaskCallback1 call;
 		int param;
 		unsigned long interval;
 		unsigned long lastRun;
@@ -59,6 +60,7 @@ private:
 	TASK tasks[TASKER_MAX_TASKS];
 	byte t_count;
 	bool t_prioritized;
+	static const int NO_PARAMETER = -1;
 };
 
 
@@ -73,16 +75,6 @@ bool Tasker::setTimeout(TaskCallback0 func, unsigned long interval, byte prio)
 	return setRepeated(func, interval, 1, prio);
 }
 
-bool Tasker::setInterval(TaskCallback0 func, unsigned long interval, byte prio)
-{
-	return setRepeated(func, interval, 0, prio);
-}
-
-bool Tasker::setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio)
-{
-	return addTask((TaskCallback1)func, interval, repeat, -1, prio);
-}
-
 bool Tasker::setTimeout(TaskCallback1 func, unsigned long interval, int param, byte prio)
 {
 	return setRepeated(func, interval, 1, param, prio);
@@ -93,9 +85,30 @@ bool Tasker::setInterval(TaskCallback1 func, unsigned long interval, int param, 
 	return setRepeated(func, interval, 0, param, prio);
 }
 
+bool Tasker::setInterval(TaskCallback0 func, unsigned long interval, byte prio)
+{
+	return setRepeated(func, interval, 0, prio);
+}
+
+bool Tasker::setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio)
+{
+	return addTask((TaskCallback1)func, interval, repeat, NO_PARAMETER, prio);
+}
+
 bool Tasker::setRepeated(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
 {
-	return addTask(func, interval, repeat, abs(param), prio);
+	if (param < 0) param = 0; // param can be nonnegative only
+	return addTask(func, interval, repeat, param, prio);
+}
+
+bool Tasker::cancel(TaskCallback0 func)
+{
+	return removeTask(findTask(func));
+}
+
+bool Tasker::cancel(TaskCallback1 func, int param)
+{
+	return removeTask(findTask(func, param));
 }
 
 void Tasker::loop(void)
@@ -107,10 +120,11 @@ void Tasker::loop(void)
 		TASK &t = tasks[t_idx];
 		if (now - t.lastRun >= t.interval) {
 			t.lastRun += t.interval;
-			if (t.param >= 0)
-				(*(t.call1))(t.param);
+			if (t.param >= 0)                         // param can be nonnegative only
+				(*(t.call))(t.param);
 			else
-				(*(t.call0))();
+				(*(TaskCallback0)(t.call))();
+
 			if (t.repeat > 0 && --t.repeat == 0) {
 				// drop the finished task by removing its slot
 				removeTask(t_idx);
@@ -125,26 +139,16 @@ void Tasker::loop(void)
 	}
 }
 
-bool Tasker::cancel(TaskCallback0 func)
-{
-	return removeTask(findTask(func));
-}
-
 int Tasker::findTask(TaskCallback0 func)
 {
-	return findTask((TaskCallback1)func, -1);
-}
-
-bool Tasker::cancel(TaskCallback1 func, int param)
-{
-	return removeTask(findTask(func, param));
+	return findTask((TaskCallback1)func, NO_PARAMETER);
 }
 
 int Tasker::findTask(TaskCallback1 func, int param)
 {
 	for(byte t_idx = 0; t_idx < t_count; t_idx++) {
 		TASK &t = tasks[t_idx];
-		if (t.call1 == func && t.param == param)
+		if (t.call == func && t.param == param)
 			return t_idx;
 	}
 	return -1;
@@ -152,13 +156,21 @@ int Tasker::findTask(TaskCallback1 func, int param)
 
 bool Tasker::addTask(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
 {
+	byte pos = (prio < t_count) ? prio : t_count;  // position of newly added task is based on priority
+
+	int idx = findTask(func, param);
+	if (idx >= 0) {
+		removeTask(idx);       // if there's a matching task then remove it first
+		pos = idx;             // new task will replace the original one
+	}
+
 	if (t_count >= TASKER_MAX_TASKS || interval == 0)
 		return false;
-	byte pos = (prio < t_count) ? prio : t_count;
+
 	if (pos < t_count)
 		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
 	TASK &t = tasks[pos];
-	t.call1 = func;
+	t.call = func;
 	t.interval = interval;
 	t.param = param;
 	t.lastRun = millis();
@@ -178,3 +190,4 @@ bool Tasker::removeTask(int t_idx)
 }
 
 #endif // _tasker_h
+// vim: tabstop=4 shiftwidth=4 noexpandtab cindent
