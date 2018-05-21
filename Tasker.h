@@ -39,7 +39,11 @@ public:
 	bool clearInterval(TaskCallback0 func) { cancel(func); };
 	bool clearInterval(TaskCallback1 func, int param) { cancel(func, param); };
 
+	unsigned long scheduledIn(TaskCallback0 func);
+	unsigned long scheduledIn(TaskCallback1 func, int param);
+
 	void loop(void);
+
 	bool isPrioritized() { return t_prioritized; }
 	void setPrioritized(bool prioritized) { t_prioritized = prioritized; }
 
@@ -109,6 +113,29 @@ bool Tasker::cancel(TaskCallback0 func)
 bool Tasker::cancel(TaskCallback1 func, int param)
 {
 	return removeTask(findTask(func, param));
+}
+
+unsigned long Tasker::scheduledIn(TaskCallback0 func)
+{
+	return scheduledIn((TaskCallback1)func, NO_PARAMETER);
+}
+
+// how long before the given task will be called
+// return 0 = task is not scheduled
+// return 1 = scheduled to run as soon as possible
+// return X = time period in milliseconds
+unsigned long Tasker::scheduledIn(TaskCallback1 func, int param)
+{
+	int t_idx = findTask(func, param);
+	if (t_idx >= 0) {
+		TASK &t = tasks[t_idx];
+		unsigned long now = millis();
+		if (now - t.lastRun >= t.interval)
+			return 1; // scheduled to run as soon as possible
+		else
+			return t.lastRun + t.interval - now;
+	}
+	return 0;
 }
 
 void Tasker::loop(void)
