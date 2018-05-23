@@ -11,8 +11,8 @@ to co-operate together by running for a short time only, otherwise it will not w
 started (in what time since now) and how many times they should be invoked
 (only once, X times or forever).
 
-The "co-operation" is best achieved by creating small, short running tasks.
-Basically wherever you'd need to include the infamous <code>delay()</code> call in your Arduino program
+The "co-operation" is best achieved by creating small, short running tasks (functions).
+Basically wherever you'd need to include the infamous `delay()` call in your Arduino program
 that's the place where you actually want to break the code flow, split
 the source code into separate functions and let Tasker run them as separate tasks.
 
@@ -30,21 +30,71 @@ illustrates the whole API and its best usage.
 
 ChangeLog
 ---------
-* version 1.5 adds an important feature that some users have been asking for: now you can stop/cancel/remove a scheduled task by calling the new function <code>cancel()</code>. If you want to stick with the familiar Javascript API then you can call <code>clearTimeout()</code> or <code>clearInterval()</code> functions instead (they are identical with the <code>cancel()</code>).
+* version 2.0 brings two new great features: now you can **modify scheduled tasks** and also **cancel them**.
+  - to modify task setup (change their timing, priority and optional parameter) simply call the `setTimeout()`/`setInterval()`/`setRepeated()` functions again.
+  - to stop/cancel a scheduled task and remove from Tasker's queue call the new function `cancel()`.
+  - if familiar with Javascript then use `clearTimeout()` or `clearInterval()` functions (identical with `cancel()`).
+  - to find out when a given task will be called use the new `scheduledIn()` function.
+  - another important change is making the optional `int` parameter passed into your functions truly optional, so if you don't want to use it you don't need to declare your function with it. I.e. the `void myFunction(int /*unused*/)` is a history now - use simple and clean `void myFunction()`.
+  - Please read the *Upgrading from v1.2 to v2.0* paragraph below for further details.
 
-* version 1.4 changes the default priority value when <code>Tasker</code> is instantiated without the optional parameter. In previous versions the priority was enabled, now it is disabled. I (and also other users of **Tasker**) found the prioritized handling of tasks rather counter-intuitive because it could happen almost randomly that some tasks were sometimes not executed at all (when a higher priority task ran for too long). Whoever wants to keep the original behaviour please instantiate Tasker like this: <code>Tasker tasker(TRUE);</code>. There are also two new functions that help to query or set the priority value: <code>isPrioritized()</code> and <code>setPrioritized(bool)</code>.
+* version 1.4 changes the default priority value when **Tasker** is instantiated without the optional parameter. In previous versions the priority was enabled by default, now it is disabled. Users of **Tasker** found the prioritized handling of tasks rather counter-intuitive because it could happen almost randomly that some tasks were sometimes not executed at all (when a higher priority task ran for too long). Whoever wants to keep the original behaviour please instantiate **Tasker** like this: `Tasker tasker(TRUE);`. There are also two new functions that help to query or set the priority value: `isPrioritized()` and `setPrioritized(bool)`.
 
-* version 1.3 removes the <code>run()</code> function - please call <code>tasker.loop()</code> in your Arduino <code>loop()</code> function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the <code>loop()</code> to be running for it. It also allowed me to remove the <code>yield()</code> call that didn't really bring anything but issues in compiling on some platforms.
+* version 1.3 removes the `run()` function - please call `tasker.loop()` in your Arduino `loop()` function instead. This makes **Tasker** much more Arduino friendly and compatible with far more platforms where the Arduino 'kernel' does some housekeeping behind the scenes and needs the `loop()` to be running for it. It also allowed me to remove the `yield()` call that didn't really bring anything but issues on some platforms.
 
 * version 1.2 adds optional priorities when defining tasks
 
 * version 1.1 adds clear example of DS18B20 handling
 
 
+Upgrading from v1.2 to v2.0
+---------------------------
+Versions 1.3-2.0 released in May 2018 introduced some small API changes that were not backward compatible so you may need to update your source code (see below for details). Changing library API is always better avoided but the collected user feedback in last year led me to simplify the API and made it more intuitive to use, which is so good thing that it was worth changing the API a bit. These are the things you might need to update in your application when using Tasker:
+
+### default value of Tasker constructor
+If you rely on the prioritized task execution (most users don't!) then enable it explicitly by adding (TRUE) as the ctor parameter:
+  | Old code                       | New code                       |
+  | ------------------------------ | ------------------------------ |
+  | `Tasker tasker;`               | `Tasker tasker(TRUE);`         |
+ 
+  Let me repeat that the prioritized task execution may cause that some tasks with lower priority are sometimes not executed if the tasks with higher priority spent too much time. This might lead to some head scratching when you're missing some function calls randomly. So most users will be happier with the default constructor without any parameter: `Tasker tasker;`
+
+### run() to loop()
+If you were using the `tasker.run()` function please change it for calling `tasker.loop()` in your Arduino loop():
+  ```cpp
+  // originally Tasker suggested to call run() as the last thing in setup()
+  void setup() {
+      ...
+      tasker.run();
+  }
+  // Arduino loop() was then unused
+  void loop() { }
+  ```
+
+  ```cpp
+  // now Tasker needs to have tasker.loop() called in Arduino loop()
+  void setup() {
+      ...
+  }
+  void loop() {
+      tasker.loop();
+      // you can add your code here, too
+  }
+  ```
+
+### remove unused parameter from task declaration
+If you don't use the additional parameter in your task/function then simply remove it:
+  | Old code                              | New code                       |
+  | ------------------------------------- | ------------------------------ |
+  | `void myFunction(int /* unused */) {` | `void myFunction() {`          |
+
+### optional int parameter must be nonnegative
+Functions/tasks can be called with an optional `int` parameter. Since v2.0 its value (specified in ``setTimeout()`` etc) must be nonnegative, i.e. 0 or greater.
+
 How to use
 ----------
 
-1. create new **Tasker** folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in **./libraries/Tasker/Tasker.h** or **install from Arduino Library Manager**
+1. install **Tasker** from **Arduino Library Manager** or create new *Tasker* folder under your Arduino projects' libraries folder and place Tasker files there so the header file ends in *./libraries/Tasker/Tasker.h*
 2. in Arduino IDE load File -> Examples -> Tasker -> MultiBlink (or other examples found there)
 3. see how easy it is to add three tasks and run them all at once (or how to read the DS18B20 without waiting)
 4. use that example as a basis for your own code
@@ -52,7 +102,7 @@ How to use
 Tasker API
 ----------
 
-* <code>Tasker([bool prioritized])</code>. The class constructor takes
+* `Tasker([bool prioritized])`. The class constructor takes
   an optional bool flag (that is set to false if omitted). If this flag
   is TRUE then the Tasker prioritizes the scheduled tasks. If the flag
   is FALSE then the Tasker considers all scheduled tasks equal. More about priorities later.
@@ -62,38 +112,38 @@ Tasker API
 	Tasker tasker(TRUE);  // creates prioritizing tasker
 ```
 
-* <code>setTimeout(function_name, time_in_milliseconds [, optional_int [, optional_priority]])</code>
+* `setTimeout(function_name, time_in_milliseconds [, optional_int [, optional_priority]])`
   Tasker will call the *function_name* in *time_in_milliseconds* from now.
-  It will run the function only once. May pass the *optional_int* parameter into the called function.
+  It will run the function only once. May pass the *optional_int* parameter (nonnegative) into the called function.
   When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
-* <code>setInterval(function_name, time_in_milliseconds [, optional_int [, optional_priority]])</code>
+* `setInterval(function_name, time_in_milliseconds [, optional_int [, optional_priority]])`
   Tasker will call the *function_name* repeatedly and forever, every
   *time_in_milliseconds* from now on.
-  May pass the *optional_int* parameter into the called function.
+  May pass the *optional_int* parameter (nonnegative) into the called function.
 
-* <code>setRepeated(function_name, time, number_of_repeats [, optional_int [, optional_priority]])</code>
+* `setRepeated(function_name, time, number_of_repeats [, optional_int [, optional_priority]])`
   Tasker will call the *function_name* repeatedly for *number_of_repeats*,
   every *time* (in_milliseconds) from now on.
-  May pass the <code>optional_int</code> parameter into the called function.
+  May pass the *optional_int* parameter (nonnegative) into the called function.
   When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
-* <code>cancel(function_name [, optional_int ])</code>
+* `cancel(function_name [, optional_int ])`
   If Tasker has the *function_name* in its scheduler queue (added there by either of those three functions above)
   it will cancel any further execution of the function and will remove it from its scheduler queue instantly.
   Its Tasker slot is made available for new tasks, of course.
   If you happened to add certain *function_name* to Tasker several times with different optional int parameters
-  then you can append the same optional int parameter when calling the <code>cancel()</code> so that Tasker
+  then you need to use the same optional int parameter when calling the `cancel()` so that Tasker
   knows which of the several task slots with the same *function_name* to remove.
 
-* <code>clearTimeout(function_name [, optional_int ])</code> is identical to <code>cancel()</code>, it just
+* `clearTimeout(function_name [, optional_int ])` is identical to `cancel()`, it just
   uses the well known Javascript API.
 
-* <code>clearInterval(function_name [, optional_int ])</code> is identical to <code>cancel()</code>, it just
+* `clearInterval(function_name [, optional_int ])` is identical to `cancel()`, it just
   uses the well known Javascript API.
 
-* <code>loop()</code> when called it runs the Tasker scheduler and process all waiting tasks, then ends.
-  It's best to let your program call this Tasker function as often as possible, ideally in the Arduino's <code>loop()</code> function:
+* `loop()` when called it runs the Tasker scheduler and process all waiting tasks, then ends.
+  It's best to let your program call this Tasker function as often as possible, ideally in the Arduino's `loop()` function:
 
 ```cpp
 	void loop() {
