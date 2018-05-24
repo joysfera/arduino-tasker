@@ -146,17 +146,21 @@ void Tasker::loop(void)
 		bool inc = true;
 		TASK &t = tasks[t_idx];
 		if (now - t.lastRun >= t.interval) {
-			t.lastRun += t.interval;
-			if (t.param >= 0)                         // param can be nonnegative only
-				(*(t.call))(t.param);
-			else
-				(*(TaskCallback0)(t.call))();
+			int param = t.param;
+			TaskCallback1 call = t.call;
 
+			t.lastRun += t.interval;
 			if (t.repeat > 0 && --t.repeat == 0) {
 				// drop the finished task by removing its slot
 				removeTask(t_idx);
 				inc = false;
 			}
+
+			if (param >= 0)   // param can be nonnegative only
+				(*(call))(param);
+			else
+				(*(TaskCallback0)(call))();
+
 			if (t_prioritized)
 				break;
 			now = millis();
