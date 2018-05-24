@@ -31,9 +31,9 @@ illustrates the whole API and its best usage.
 ChangeLog
 ---------
 * version 2.0 brings two new great features: now you can **modify scheduled tasks** and also **cancel them**.
-  - to modify task setup (change their timing, priority and optional parameter) simply call the `setTimeout()`/`setInterval()`/`setRepeated()` functions again.
+  - to modify task setup (change their timing or priority) simply call the `setTimeout()`/`setInterval()`/`setRepeated()` functions again.
   - to stop/cancel a scheduled task and remove from Tasker's queue call the new function `cancel()`.
-  - if familiar with Javascript then use `clearTimeout()` or `clearInterval()` functions (identical with `cancel()`).
+  - if familiar with Javascript feel free to use `clearTimeout()` or `clearInterval()` functions (identical with `cancel()`).
   - to find out when a given task will be called use the new `scheduledIn()` function.
   - another important change is making the optional `int` parameter passed into your functions truly optional, so if you don't want to use it you don't need to declare your function with it. I.e. the `void myFunction(int /*unused*/)` is a history now - use simple and clean `void myFunction()`.
   - Please read the *Upgrading from v1.2 to v2.0* paragraph below for further details.
