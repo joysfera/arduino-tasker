@@ -33,7 +33,7 @@ ChangeLog
 * version 2.0 brings two new great features: now you can **modify scheduled tasks** and also **cancel them**.
   - to modify task setup (change their timing or priority) simply call the `setTimeout()`/`setInterval()`/`setRepeated()` functions again.
   - to stop/cancel a scheduled task and remove from Tasker's queue call the new function `cancel()`.
-  - if familiar with Javascript feel free to use `clearTimeout()` or `clearInterval()` functions (identical with `cancel()`).
+  - if familiar with Javascript you can call `clearTimeout()` and `clearInterval()` (identical with `cancel()`).
   - to find out when a given task will be called use the new `scheduledIn()` function.
   - another important change is making the optional `int` parameter passed into your functions truly optional, so if you don't want to use it you don't need to declare your function with it. I.e. the `void myFunction(int /*unused*/)` is a history now - use simple and clean `void myFunction()`.
   - Please read the *Upgrading from v1.2 to v2.0* paragraph below for further details.
@@ -51,16 +51,19 @@ Upgrading from v1.2 to v2.0
 ---------------------------
 Versions 1.3-2.0 released in May 2018 introduced some small API changes that were not backward compatible so you may need to update your source code (see below for details). Changing library API is always better avoided but the collected user feedback in last year led me to simplify the API and made it more intuitive to use, which is so good thing that it was worth changing the API a bit. These are the things you might need to update in your application when using Tasker:
 
-### default value of Tasker constructor
-If you rely on the prioritized task execution (most users don't!) then enable it explicitly by adding (TRUE) as the ctor parameter:
-  | Old code                       | New code                       |
-  | ------------------------------ | ------------------------------ |
-  | `Tasker tasker;`               | `Tasker tasker(TRUE);`         |
+### default value of Tasker constructor has changed
+If you rely on the prioritized task execution (most users don't!) then enable it explicitly by adding (TRUE) as the ctor parameter because it's no longer enabled by default:
+
+  | old code             | new code              |
+  |----------------------|-----------------------|
+  | `Tasker tasker;`     | `Tasker tasker(TRUE);`|
  
   Let me repeat that the prioritized task execution may cause that some tasks with lower priority are sometimes not executed if the tasks with higher priority spent too much time. This might lead to some head scratching when you're missing some function calls randomly. So most users will be happier with the default constructor without any parameter: `Tasker tasker;`
 
-### run() to loop()
+### change run() to loop()
 If you were using the `tasker.run()` function please change it for calling `tasker.loop()` in your Arduino loop():
+
+  old code:
   ```cpp
   // originally Tasker suggested to call run() as the last thing in setup()
   void setup() {
@@ -71,6 +74,7 @@ If you were using the `tasker.run()` function please change it for calling `task
   void loop() { }
   ```
 
+  new code:
   ```cpp
   // now Tasker needs to have tasker.loop() called in Arduino loop()
   void setup() {
@@ -84,9 +88,10 @@ If you were using the `tasker.run()` function please change it for calling `task
 
 ### remove unused parameter from task declaration
 If you don't use the additional parameter in your task/function then simply remove it:
-  | Old code                              | New code                       |
-  | ------------------------------------- | ------------------------------ |
-  | `void myFunction(int /* unused */) {` | `void myFunction() {`          |
+
+| old code                             | new code                     |
+|--------------------------------------|------------------------------|
+| `void myFunction(int /* unused */) {`| `void myFunction() {`        |
 
 ### optional int parameter must be nonnegative
 Functions/tasks can be called with an optional `int` parameter. Since v2.0 its value (specified in ``setTimeout()`` etc) must be nonnegative, i.e. 0 or greater.
@@ -108,47 +113,49 @@ Tasker API
   is FALSE then the Tasker considers all scheduled tasks equal. More about priorities later.
 
 ```cpp
-	Tasker tasker;        // creates non-prioritizing tasker
-	Tasker tasker(TRUE);  // creates prioritizing tasker
+  Tasker tasker;        // creates non-prioritizing tasker
+  Tasker tasker(TRUE);  // creates prioritizing tasker
 ```
 
-* `setTimeout(function_name, time_in_milliseconds [, optional_int [, optional_priority]])`
-  Tasker will call the *function_name* in *time_in_milliseconds* from now.
+* `setTimeout(function, time_in_milliseconds [, optional_int [, optional_priority]])`
+  Tasker will call the *function* in *time_in_milliseconds* from now.
   It will run the function only once. May pass the *optional_int* parameter (nonnegative) into the called function.
   When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
-* `setInterval(function_name, time_in_milliseconds [, optional_int [, optional_priority]])`
-  Tasker will call the *function_name* repeatedly and forever, every
+* `setInterval(function, time_in_milliseconds [, optional_int [, optional_priority]])`
+  Tasker will call the *function* repeatedly and forever, every
   *time_in_milliseconds* from now on.
   May pass the *optional_int* parameter (nonnegative) into the called function.
 
-* `setRepeated(function_name, time, number_of_repeats [, optional_int [, optional_priority]])`
-  Tasker will call the *function_name* repeatedly for *number_of_repeats*,
+* `setRepeated(function, time, number_of_repeats [, optional_int [, optional_priority]])`
+  Tasker will call the *function* repeatedly for *number_of_repeats*,
   every *time* (in_milliseconds) from now on.
   May pass the *optional_int* parameter (nonnegative) into the called function.
   When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
-* `cancel(function_name [, optional_int ])`
-  If Tasker has the *function_name* in its scheduler queue (added there by either of those three functions above)
+* `cancel(function [, optional_int ])`
+  If Tasker has the *function* in its scheduler queue (added there by either of those three functions above)
   it will cancel any further execution of the function and will remove it from its scheduler queue instantly.
   Its Tasker slot is made available for new tasks, of course.
-  If you happened to add certain *function_name* to Tasker several times with different optional int parameters
+  If you happened to add certain *function* to Tasker several times with different optional int parameters
   then you need to use the same optional int parameter when calling the `cancel()` so that Tasker
-  knows which of the several task slots with the same *function_name* to remove.
+  knows which of the several task slots with the same *function* to remove.
 
-* `clearTimeout(function_name [, optional_int ])` is identical to `cancel()`, it just
+* `clearTimeout(function [, optional_int ])` is identical to `cancel()`, it just
   uses the well known Javascript API.
 
-* `clearInterval(function_name [, optional_int ])` is identical to `cancel()`, it just
+* `clearInterval(function [, optional_int ])` is identical to `cancel()`, it just
   uses the well known Javascript API.
+  
+* `scheduledIn(function [, optional_int ])` returns number of milliseconds till calling the given *function*. Returned 0 means that *function* (with *optional_int*) is not in Tasker's queue so it will never be called.
 
 * `loop()` when called it runs the Tasker scheduler and process all waiting tasks, then ends.
   It's best to let your program call this Tasker function as often as possible, ideally in the Arduino's `loop()` function:
 
 ```cpp
-	void loop() {
-		tasker.loop();
-	}
+  void loop() {
+      tasker.loop();
+  }
 ```
 
 Task priorities (optional)
@@ -159,10 +166,10 @@ priority than those added earlier, unless you specify their priority with
 optional parameter: the lower its value the higher priority, 0 = highest priority.
 
 ```cpp
-	Tasker tasker(TRUE);
-	tasker.setInterval(most_important_fn, ..); // formerly added calls have automatically higher priority
-	tasker.setInterval(less_important_fn, ..); // the later added calls the lower priority they have
-	tasker.setInterval(highest_priority_fn, .., .., 0); // unless you specify the priority explicitly by the last parameter
+Tasker tasker(TRUE);
+tasker.setInterval(most_important_fn, ..); // formerly added calls have automatically higher priority
+tasker.setInterval(less_important_fn, ..); // the later added calls the lower priority they have
+tasker.setInterval(highest_priority_fn, .., .., 0); // unless you specify the priority explicitly by the last parameter
 ```
 
 Normally, when there is enough time for calling each of the scheduled task
@@ -175,10 +182,10 @@ If the priorities were disabled (by default the are) then the scheduler would si
 in its queue. If all your tasks are equally important (they most probably are) you might simply ignore the whole idea of priorities and their implementation.
 
 ```cpp
-	Tasker tasker;
-	tasker.setInterval(fn, ..);
-	tasker.setInterval(equally_important_fn, ..);
-	tasker.setInterval(order_doesnt_matter_fn, ..);
+Tasker tasker;
+tasker.setInterval(fn, ..);
+tasker.setInterval(equally_important_fn, ..);
+tasker.setInterval(order_doesnt_matter_fn, ..);
 ```
 
 Caveats
@@ -189,8 +196,8 @@ simultaneously but you might want to increase this number - or even decrease, to
 save the precious RAM (each slot takes 14 bytes of RAM).
 
 ```cpp
-	#define TASKER_MAX_TASKS 32
-	#include "Tasker.h"
+#define TASKER_MAX_TASKS 32
+#include "Tasker.h"
 ```
 
 Good news is that Tasker automatically releases slots of finished tasks (those
