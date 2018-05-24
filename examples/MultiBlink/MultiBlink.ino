@@ -13,7 +13,7 @@ Tasker tasker;
 /*
  * Example of chaining tasks by calling the setTimeout() from a task
  */
-void blink1(int /* unused */)
+void blink1()
 {
     byte pin = 13;
     bool led = !digitalRead(pin);

@@ -10,13 +10,13 @@ Tasker tasker;
 OneWire oneWire(4);
 DallasTemperature sensor(&oneWire);
 
-void readSensor(int) {
+void readSensor() {
     // read the actual temperature after it's been converted
     float temperature = sensor.getTempC(0);
     // do what you need with the temperature here
 }
 
-void startConversion(int) {
+void startConversion() {
     // start temperature conversion (does not block)
     sensor.requestTemperatures();
     // schedule reading the actual temperature in 750 milliseconds
