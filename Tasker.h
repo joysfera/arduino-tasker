@@ -33,11 +33,11 @@ public:
 	bool cancel(TaskCallback0 func);
 	bool cancel(TaskCallback1 func, int param);
 
-	bool clearTimeout(TaskCallback0 func) { cancel(func); };
-	bool clearTimeout(TaskCallback1 func, int param) { cancel(func, param); };
+	bool clearTimeout(TaskCallback0 func) { return cancel(func); };
+	bool clearTimeout(TaskCallback1 func, int param) { return cancel(func, param); };
 
-	bool clearInterval(TaskCallback0 func) { cancel(func); };
-	bool clearInterval(TaskCallback1 func, int param) { cancel(func, param); };
+	bool clearInterval(TaskCallback0 func) { return cancel(func); };
+	bool clearInterval(TaskCallback1 func, int param) { return cancel(func, param); };
 
 	unsigned long scheduledIn(TaskCallback0 func);
 	unsigned long scheduledIn(TaskCallback1 func, int param);
