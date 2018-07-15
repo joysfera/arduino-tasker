@@ -1,13 +1,13 @@
-Tasker		KEYWORD1
+Tasker	KEYWORD1
 
 setTimeout	KEYWORD2
 setInterval	KEYWORD2
 setRepeated	KEYWORD2
-cancel		KEYWORD2
+cancel	KEYWORD2
 clearTimeout	KEYWORD2
 clearInterval	KEYWORD2
 scheduledIn	KEYWORD2
-loop		KEYWORD2
+loop	KEYWORD2
 isPrioritized	KEYWORD2
 setPrioritized	KEYWORD2
 
