@@ -30,10 +30,20 @@ illustrates the whole API and its best usage.
 
 ChangeLog
 ---------
+* version 3.0 is a major modernization (full backward compatibility preserved via `using Tasker = TaskerT<...>` alias):
+  - New `TaskerT<N>` template lets you set max tasks per instance at compile time (`TaskerT<64> tasker;`), while bare `Tasker tasker;` keeps working and honors `#define TASKER_MAX_TASKS`.
+  - Added `setImmediate()` (all 3 callback variants) for one-shot "run as soon as possible" tasks.
+  - Full `void*` parameter support across the entire API (new `TaskCallbackPtr` type) in addition to the classic no-param and `int` variants.
+  - New capacity helpers: `isFull()`, `count()`, `available()`, plus `static constexpr size_t capacity`.
+  - `getUserData()` / `setUserData()` for attaching context (especially useful with `void*` callbacks).
+  - `int` parameter values can now be negative (v2 artificially clamped them >=0); `void*` supports any pointer value.
+  - Better platform support: on 32-bit boards (ESP32, STM32, Teensy, RP2040...) you get up to 65535 tasks, ~4 billion repeats (unsigned int), full 32/64-bit pointers and larger `int`; on 8-bit AVR (Uno etc.) max 255 tasks, 16-bit repeat count, packed 15-byte tasks for RAM savings.
+  - Internal cleanups (unified findTask/scheduledIn logic, no more magic sentinels) while keeping identical behavior for old code.
+
 * version 2.0 brings two new great features: now you can **modify scheduled tasks** and also **cancel them**.
   - to modify task setup (change their timing or priority) simply call the `setTimeout()`/`setInterval()`/`setRepeated()` functions again.
   - to stop/cancel a scheduled task and remove from Tasker's queue call the new function `cancel()`.
-  - if familiar with Javascript you can call `clearTimeout()` and `clearInterval()` (identical with `cancel()`).
+  - if familiar with JavaScript you can call `clearTimeout()` and `clearInterval()` (identical with `cancel()`).
   - to find out when a given task will be called use the new `scheduledIn()` function.
   - another important change is making the optional `int` parameter passed into your functions truly optional, so if you don't want to use it you don't need to declare your function with it. I.e. the `void myFunction(int /*unused*/)` is a history now - use simple and clean `void myFunction()`.
   - Please read the *Upgrading from v1.2 to v2.0* paragraph below for further details.
@@ -95,6 +105,45 @@ If you don't use the additional parameter in your task/function then simply remo
 
 ### optional int parameter must be nonnegative
 Functions/tasks can be called with an optional `int` parameter. Since v2.0 its value (specified in ``setTimeout()`` etc) must be nonnegative, i.e. 0 or greater.
+(Note: in v3 this restriction was lifted — negative values are now fully supported for `int` params, and `void*` accepts any pointer.)
+
+Upgrading from v2 to v3
+-----------------------
+Version 3 (2026) is a major internal modernization but **maintains 100% backward compatibility**. Old code using `Tasker tasker;` compiles and behaves identically with zero changes.
+
+### Template for max tasks (recommended for new code)
+The classic global `#define` still works and controls the default size:
+```cpp
+#define TASKER_MAX_TASKS 20
+#include <Tasker.h>
+Tasker tasker;           // uses the #define (or 10 if omitted)
+```
+For per-instance sizing (new in v3) use the template instead:
+```cpp
+#include <Tasker.h>
+TaskerT<64> bigTasker;   // 64 slots, independent of any #define
+TaskerT<8>  tiny;        // good for AVR with tight RAM
+Tasker tasker;           // still works, respects TASKER_MAX_TASKS
+```
+`Tasker` is simply `using Tasker = TaskerT<TASKER_MAX_TASKS>;`
+
+### Major improvements in v3
+The main goals were to modernize the internals while preserving 100% backward compatibility:
+
+- **Cleaner callback types**: `TaskCallback`, `TaskCallbackInt`, `TaskCallbackPtr` (old `TaskCallback0`/`1` aliases still work).
+- **Removed fragile hacks**: No more magic `NO_PARAMETER` sentinel or forcing `int` parameters to be nonnegative. Parameters are now cleanly stored as `void*` with explicit flags.
+- **Better safety**: `addTask()` now safely returns `false` when full. `findTask()` negative results are properly handled.
+- **setImmediate()**: New one-shot "run as soon as possible" tasks. Internally uses `interval=0` + `IS_IMMEDIATE` flag. `scheduledIn()` returns 1 for them. (No `int` convenience overload for `void*` handlers — use `TaskCallbackInt` if you need an integer.)
+- **Internal cleanup**: Uses `tasker_count_t` (uint8_t on AVR, uint16_t elsewhere) instead of `byte`. No more magic sentinels.
+
+### New in v3 (see full list in the ChangeLog above)
+- `setImmediate(...)` for one-shot immediate tasks (3 variants)
+- Full `void*` callback support + `setUserData()`/`getUserData()`
+- `isFull()`, `count()`, `available()`, `capacity`
+- Negative `int` parameter values now allowed
+- `TaskerT<N>` for per-instance sizing (see template section above)
+
+All changes are fully backward compatible.
 
 How to use
 ----------
@@ -113,41 +162,43 @@ Tasker API
   is FALSE then the Tasker considers all scheduled tasks equal. More about priorities later.
 
 ```cpp
-  Tasker tasker;        // creates non-prioritizing tasker
+  Tasker tasker;        // creates non-prioritizing tasker (uses default size)
   Tasker tasker(TRUE);  // creates prioritizing tasker
+  TaskerT<20> small;    // v3: explicit size (recommended for new code)
 ```
 
-* `setTimeout(function, time_in_milliseconds [, optional_int [, optional_priority]])`
+* `setTimeout(function, time_in_milliseconds [, optional_int_or_voidptr [, optional_priority]])`
   Tasker will call the *function* in *time_in_milliseconds* from now.
-  It will run the function only once. May pass the *optional_int* parameter (nonnegative) into the called function.
+  It will run the function only once. May pass an optional int or void* parameter into the called function.
   When the task finishes its Tasker slot is made available for new tasks (more about slots later).
 
-* `setInterval(function, time_in_milliseconds [, optional_int [, optional_priority]])`
+* `setInterval(function, time_in_milliseconds [, optional_int_or_voidptr [, optional_priority]])`
   Tasker will call the *function* repeatedly and forever, every
   *time_in_milliseconds* from now on.
-  May pass the *optional_int* parameter (nonnegative) into the called function.
+  May pass an optional int or void* parameter into the called function.
 
-* `setRepeated(function, time, number_of_repeats [, optional_int [, optional_priority]])`
+* `setRepeated(function, time, number_of_repeats [, optional_int_or_voidptr [, optional_priority]])`
   Tasker will call the *function* repeatedly for *number_of_repeats*,
   every *time* (in_milliseconds) from now on.
-  May pass the *optional_int* parameter (nonnegative) into the called function.
+  May pass an optional int or void* parameter into the called function.
   When the task finishes (after its last iteration) its Tasker slot is made available for new tasks.
 
-* `cancel(function [, optional_int ])`
+* `setImmediate(function [, optional_int_or_voidptr [, optional_priority]])` (new in v3)
+  Schedules a one-shot task that will be called as soon as possible (higher priority than normal timers). Three variants exist for no-param, int, and void* callbacks. Always one-shot; `scheduledIn()` returns 1 for them.
+
+* `cancel(function [, optional_int_or_voidptr ])`
   If Tasker has the *function* in its scheduler queue (added there by either of those three functions above)
   it will cancel any further execution of the function and will remove it from its scheduler queue instantly.
   Its Tasker slot is made available for new tasks, of course.
-  If you happened to add certain *function* to Tasker several times with different optional int parameters
-  then you need to use the same optional int parameter when calling the `cancel()` so that Tasker
-  knows which of the several task slots with the same *function* to remove.
+  If you added the same *function* multiple times with different parameters you must supply the exact same parameter value when cancelling.
 
-* `clearTimeout(function [, optional_int ])` is identical to `cancel()`, it just
-  uses the well known Javascript API.
+* `clearTimeout(function [, optional_int_or_voidptr ])` is identical to `cancel()`, it just
+  uses the well known JavaScript API.
 
-* `clearInterval(function [, optional_int ])` is identical to `cancel()`, it just
-  uses the well known Javascript API.
-  
-* `scheduledIn(function [, optional_int ])` returns number of milliseconds till calling the given *function*. Returned 0 means that *function* (with *optional_int*) is not in Tasker's queue so it will never be called.
+* `clearInterval(function [, optional_int_or_voidptr ])` is identical to `cancel()`, it just
+  uses the well known JavaScript API.
+   
+* `scheduledIn(function [, optional_int_or_voidptr ])` returns number of milliseconds till calling the given *function*. Returned 0 means that *function* (with parameter) is not in Tasker's queue so it will never be called. (Returns 1 for immediate tasks.)
 
 * `loop()` when called it runs the Tasker scheduler and process all waiting tasks, then ends.
   It's best to let your program call this Tasker function as often as possible, ideally in the Arduino's `loop()` function:
@@ -178,7 +229,7 @@ longer time and the scheduler detects that certain tasks are delayed
 (are behind their schedule) it needs to decide which task will be run of those
 that should have been run already. And that's where the tasks' priorities step
 in: the task added earlier or with a higher priority will be chosen.
-If the priorities were disabled (by default the are) then the scheduler would simply run the next task
+If the priorities were disabled (by default they are) then the scheduler would simply run the next task
 in its queue. If all your tasks are equally important (they most probably are) you might simply ignore the whole idea of priorities and their implementation.
 
 ```cpp
@@ -190,20 +241,27 @@ tasker.setInterval(order_doesnt_matter_fn, ..);
 
 Caveats
 -------
-Make sure you define enough task "slots" in the Tasker, before you include its
-header file. By default there are 10 slots defined for up to ten tasks running
-simultaneously but you might want to increase this number - or even decrease, to
-save the precious RAM (each slot takes 14 bytes of RAM).
+**Configuring the maximum number of tasks (slots):**
 
+The classic way still works:
 ```cpp
 #define TASKER_MAX_TASKS 32
-#include "Tasker.h"
+#include <Tasker.h>
+Tasker tasker;   // gets 32 slots
+```
+For new code the recommended way is the template (gives per-instance sizing and works even without any #define):
+```cpp
+#include <Tasker.h>
+TaskerT<32> tasker;     // 32 slots for this instance
+TaskerT<200> big;       // up to 65535 on 32-bit boards, 255 on AVR
+Tasker plain;           // uses TASKER_MAX_TASKS or default 10
 ```
 
-Good news is that Tasker automatically releases slots of finished tasks (those
-that were invoked by *setTimeout* or those that were run by *setRepeated* for their last time).
-That's why one can chain the tasks with *setTimeout* calls from within
-task function or even call one task using *setTimeout* recursively and the slots don't run out.
+Memory usage:
+- 15 bytes/task on AVR (packed)
+- ~24 bytes/task on 32-bit (larger repeat counts + pointers)
+
+Tasker automatically frees slots of finished tasks, so recursive/chained `setTimeout()` is safe.
 
 I consider this library finished and stable for everyday use. Adding more features
 is not expected, the library will stay short, simple and fast.
@@ -216,8 +274,6 @@ E-mail: petr@pstehlik.cz
 
 Web: https://www.pstehlik.cz/
 
-Daily active on Google+: https://plus.google.com/+PetrStehl%C3%ADk
+Active on X as https://x.com/joysfera
 
 Longer articles are published at blog: http://joysfera.blogspot.com/
-
-Sometimes tweets as https://twitter.com/joysfera

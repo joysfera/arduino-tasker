@@ -1,224 +1,395 @@
 /*
  * Tasker for Arduino - cooperative task scheduler with Javascript like API
- * Copyleft (c) 2015-2018  Petr Stehlik  petr@pstehlik.cz
+ * Copyleft (c) 2015-2026  Petr Stehlik  petr@pstehlik.cz
  * Distributed under the GNU LGPL http://www.gnu.org/licenses/lgpl.txt
+ *
+ * Number of tasks configurable at compile time to save precious RAM
+ *
+ * Memory usage:
+ *   - 15 bytes per scheduled task on AVR (Uno, Nano, Mega...)
+ *   - 24 bytes per task on 32-bit platforms (ESP32, Teensy, RP2040, etc.)
  */
 
 #ifndef _tasker_h
 #define _tasker_h
 
 #ifndef TASKER_MAX_TASKS
-#define TASKER_MAX_TASKS 10 // max 254 entries, one occupies 14 bytes of RAM
+#define TASKER_MAX_TASKS 10 // max 255 entries on AVR, up to 65535 entries elsewhere
 #endif
 
-#include "Arduino.h"
+#include <Arduino.h>
 
-typedef void (*TaskCallback0)(void);
-typedef void (*TaskCallback1)(int);
+#if defined(__AVR__)
+    using tasker_count_t = uint8_t;
+#else
+    using tasker_count_t = uint16_t;
+#endif
 
-class Tasker
+// Pack the TASK struct on AVR (8-bit) to consume as little RAM as possible.
+#if defined(__AVR__)
+    #define TASKER_PACKED __attribute__((packed))
+#else
+    #define TASKER_PACKED
+#endif
+
+typedef void (*TaskCallback)(void);
+typedef void (*TaskCallbackInt)(int);
+typedef void (*TaskCallbackPtr)(void*);
+
+// Backward compatibility aliases
+typedef TaskCallback    TaskCallback0;
+typedef TaskCallbackInt TaskCallback1;
+
+template <size_t MAX_TASKS = TASKER_MAX_TASKS>
+class TaskerT
 {
 public:
-	Tasker(bool prioritized = false);
+    TaskerT(bool prioritized = false);
 
-	bool setTimeout(TaskCallback0 func, unsigned long interval, byte prio = TASKER_MAX_TASKS);
-	bool setTimeout(TaskCallback1 func, unsigned long interval, int param, byte prio = TASKER_MAX_TASKS);
+    // No parameter
+    bool setImmediate(TaskCallback func, tasker_count_t prio = MAX_TASKS);
+    bool setTimeout(TaskCallback func, unsigned long interval, tasker_count_t prio = MAX_TASKS);
+    bool setInterval(TaskCallback func, unsigned long interval, tasker_count_t prio = MAX_TASKS);
+    bool setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, tasker_count_t prio = MAX_TASKS);
+    bool cancel(TaskCallback func);
+    bool clearTimeout(TaskCallback func) { return cancel(func); }
+    bool clearInterval(TaskCallback func) { return cancel(func); }
+    unsigned long scheduledIn(TaskCallback func);
 
-	bool setInterval(TaskCallback0 func, unsigned long interval, byte prio = TASKER_MAX_TASKS);
-	bool setInterval(TaskCallback1 func, unsigned long interval, int param, byte prio = TASKER_MAX_TASKS);
+    // int parameter
+    bool setImmediate(TaskCallbackInt func, int value, tasker_count_t prio = MAX_TASKS);
+    bool setTimeout(TaskCallbackInt func, unsigned long interval, int value, tasker_count_t prio = MAX_TASKS);
+    bool setInterval(TaskCallbackInt func, unsigned long interval, int value, tasker_count_t prio = MAX_TASKS);
+    bool setRepeated(TaskCallbackInt func, unsigned long interval, unsigned int repeat, int value, tasker_count_t prio = MAX_TASKS);
+    bool cancel(TaskCallbackInt func, int value);
+    bool clearTimeout(TaskCallbackInt func, int value) { return cancel(func, value); }
+    bool clearInterval(TaskCallbackInt func, int value) { return cancel(func, value); }
+    unsigned long scheduledIn(TaskCallbackInt func, int value);
 
-	bool setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio = TASKER_MAX_TASKS);
-	bool setRepeated(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio = TASKER_MAX_TASKS);
+    // void* parameter
+    bool setImmediate(TaskCallbackPtr func, void* value, tasker_count_t prio = MAX_TASKS);
+    bool setTimeout(TaskCallbackPtr func, unsigned long interval, void* value, tasker_count_t prio = MAX_TASKS);
+    bool setInterval(TaskCallbackPtr func, unsigned long interval, void* value, tasker_count_t prio = MAX_TASKS);
+    bool setRepeated(TaskCallbackPtr func, unsigned long interval, unsigned int repeat, void* value, tasker_count_t prio = MAX_TASKS);
+    bool cancel(TaskCallbackPtr func, void* value);
+    bool clearTimeout(TaskCallbackPtr func, void* value) { return cancel(func, value); }
+    bool clearInterval(TaskCallbackPtr func, void* value) { return cancel(func, value); }
+    unsigned long scheduledIn(TaskCallbackPtr func, void* value);
 
-	bool cancel(TaskCallback0 func);
-	bool cancel(TaskCallback1 func, int param);
+    void loop(void);
 
-	bool clearTimeout(TaskCallback0 func) { return cancel(func); };
-	bool clearTimeout(TaskCallback1 func, int param) { return cancel(func, param); };
+    bool isPrioritized() { return t_prioritized; }
+    void setPrioritized(bool prioritized) { t_prioritized = prioritized; }
 
-	bool clearInterval(TaskCallback0 func) { return cancel(func); };
-	bool clearInterval(TaskCallback1 func, int param) { return cancel(func, param); };
+    // Capacity helpers
+    bool            isFull()    const { return t_count >= MAX_TASKS; }
+    tasker_count_t  count()     const { return t_count; }
+    tasker_count_t  available() const { return static_cast<tasker_count_t>(MAX_TASKS - t_count); }
 
-	unsigned long scheduledIn(TaskCallback0 func);
-	unsigned long scheduledIn(TaskCallback1 func, int param);
+    // Small helper for global user data (e.g. context)
+    void*  getUserData() const { return userData; }
+    void   setUserData(void* data) { userData = data; }
 
-	void loop(void);
-
-	bool isPrioritized() { return t_prioritized; }
-	void setPrioritized(bool prioritized) { t_prioritized = prioritized; }
+    static constexpr size_t capacity = MAX_TASKS;
 
 private:
-	struct TASK {
-		TaskCallback1 call;
-		int param;
-		unsigned long interval;
-		unsigned long lastRun;
-		unsigned int repeat;
-	};
+    // TASK struct size:
+    //   - 15 bytes on AVR (packed, unsigned int repeat = 2 bytes)
+    //   - Larger on 32-bit platforms (unsigned int repeat = 4 bytes + alignment)
+    struct TASKER_PACKED TASK {
+        void*           call;
+        void*           param;
+        unsigned long   interval;
+        unsigned long   lastRun;
+        unsigned int    repeat;
+        uint8_t         flags;
+    };
 
-	int findTask(TaskCallback0 func);
-	int findTask(TaskCallback1 func, int param);
-	bool addTask(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio);
-	bool removeTask(int t_idx);
+    int findTask(TaskCallback func);
+    int findTask(TaskCallbackInt func, int value);
+    int findTask(TaskCallbackPtr func, void* value);
 
-	TASK tasks[TASKER_MAX_TASKS];
-	byte t_count;
-	bool t_prioritized;
-	static const int NO_PARAMETER = -1;
+    bool addTask(void* func, unsigned long interval, unsigned int repeat, void* value, uint8_t flags, tasker_count_t prio);
+
+    bool removeTask(int t_idx);
+
+    TASK tasks[MAX_TASKS];
+    tasker_count_t t_count;
+    bool t_prioritized;
+    void* userData = nullptr;
+
+    static constexpr uint8_t HAS_PARAM     = 0b00000001;
+    static constexpr uint8_t PARAM_IS_INT  = 0b00000010;
+    static constexpr uint8_t IS_IMMEDIATE  = 0b00000100;
+
+    int findTaskImpl(void* func, void* param, uint8_t flags, uint8_t mask);
+    unsigned long scheduledInImpl(int t_idx);
 };
 
+// ====================== Implementation ======================
 
-Tasker::Tasker(bool prioritized)
+template <size_t MAX_TASKS>
+TaskerT<MAX_TASKS>::TaskerT(bool prioritized)
 {
-	t_count = 0;
-	t_prioritized = prioritized;
+    t_count = 0;
+    t_prioritized = prioritized;
 }
 
-bool Tasker::setTimeout(TaskCallback0 func, unsigned long interval, byte prio)
+// === No parameter versions ===
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setImmediate(TaskCallback func, tasker_count_t prio)
 {
-	return setRepeated(func, interval, 1, prio);
+    return addTask((void*)func, 0, 0, nullptr, IS_IMMEDIATE, prio);
 }
 
-bool Tasker::setTimeout(TaskCallback1 func, unsigned long interval, int param, byte prio)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setTimeout(TaskCallback func, unsigned long interval, tasker_count_t prio)
 {
-	return setRepeated(func, interval, 1, param, prio);
+    return addTask((void*)func, interval, 1, nullptr, 0, prio);
 }
 
-bool Tasker::setInterval(TaskCallback1 func, unsigned long interval, int param, byte prio)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setInterval(TaskCallback func, unsigned long interval, tasker_count_t prio)
 {
-	return setRepeated(func, interval, 0, param, prio);
+    return addTask((void*)func, interval, 0, nullptr, 0, prio);
 }
 
-bool Tasker::setInterval(TaskCallback0 func, unsigned long interval, byte prio)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setRepeated(TaskCallback func, unsigned long interval, unsigned int repeat, tasker_count_t prio)
 {
-	return setRepeated(func, interval, 0, prio);
+    return addTask((void*)func, interval, repeat, nullptr, 0, prio);
 }
 
-bool Tasker::setRepeated(TaskCallback0 func, unsigned long interval, unsigned int repeat, byte prio)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::cancel(TaskCallback func)
 {
-	return addTask((TaskCallback1)func, interval, repeat, NO_PARAMETER, prio);
+    return removeTask(findTask(func));
 }
 
-bool Tasker::setRepeated(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
+template <size_t MAX_TASKS>
+unsigned long TaskerT<MAX_TASKS>::scheduledIn(TaskCallback func)
 {
-	if (param < 0) param = 0; // param can be nonnegative only
-	return addTask(func, interval, repeat, param, prio);
+    return scheduledInImpl(findTask(func));
 }
 
-bool Tasker::cancel(TaskCallback0 func)
+// === int parameter versions ===
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setImmediate(TaskCallbackInt func, int value, tasker_count_t prio)
 {
-	return removeTask(findTask(func));
+    return addTask((void*)func, 0, 0, reinterpret_cast<void*>(value), IS_IMMEDIATE | HAS_PARAM | PARAM_IS_INT, prio);
 }
 
-bool Tasker::cancel(TaskCallback1 func, int param)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setTimeout(TaskCallbackInt func, unsigned long interval, int value, tasker_count_t prio)
 {
-	return removeTask(findTask(func, param));
+    return addTask((void*)func, interval, 1, reinterpret_cast<void*>(value), HAS_PARAM | PARAM_IS_INT, prio);
 }
 
-unsigned long Tasker::scheduledIn(TaskCallback0 func)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setInterval(TaskCallbackInt func, unsigned long interval, int value, tasker_count_t prio)
 {
-	return scheduledIn((TaskCallback1)func, NO_PARAMETER);
+    return addTask((void*)func, interval, 0, reinterpret_cast<void*>(value), HAS_PARAM | PARAM_IS_INT, prio);
 }
 
-// how long before the given task will be called
-// return 0 = task is not scheduled
-// return 1 = scheduled to run as soon as possible
-// return X = time period in milliseconds
-unsigned long Tasker::scheduledIn(TaskCallback1 func, int param)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setRepeated(TaskCallbackInt func, unsigned long interval, unsigned int repeat, int value, tasker_count_t prio)
 {
-	int t_idx = findTask(func, param);
-	if (t_idx >= 0) {
-		TASK &t = tasks[t_idx];
-		unsigned long now = millis();
-		if (now - t.lastRun >= t.interval)
-			return 1; // scheduled to run as soon as possible
-		else
-			return t.lastRun + t.interval - now;
-	}
-	return 0;
+    return addTask((void*)func, interval, repeat, reinterpret_cast<void*>(value), HAS_PARAM | PARAM_IS_INT, prio);
 }
 
-void Tasker::loop(void)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::cancel(TaskCallbackInt func, int value)
 {
-	byte t_idx = 0;
-	unsigned long now = millis();
-	while(t_idx < t_count) {
-		bool inc = true;
-		TASK &t = tasks[t_idx];
-		if (now - t.lastRun >= t.interval) {
-			int param = t.param;
-			TaskCallback1 call = t.call;
-
-			t.lastRun += t.interval;
-			if (t.repeat > 0 && --t.repeat == 0) {
-				// drop the finished task by removing its slot
-				removeTask(t_idx);
-				inc = false;
-			}
-
-			if (param >= 0)   // param can be nonnegative only
-				(*(call))(param);
-			else
-				(*(TaskCallback0)(call))();
-
-			if (t_prioritized)
-				break;
-			now = millis();
-		}
-		if (inc)
-			t_idx++;
-	}
+    return removeTask(findTask(func, value));
 }
 
-int Tasker::findTask(TaskCallback0 func)
+template <size_t MAX_TASKS>
+unsigned long TaskerT<MAX_TASKS>::scheduledIn(TaskCallbackInt func, int value)
 {
-	return findTask((TaskCallback1)func, NO_PARAMETER);
+    return scheduledInImpl(findTask(func, value));
 }
 
-int Tasker::findTask(TaskCallback1 func, int param)
+// === void* parameter versions ===
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setImmediate(TaskCallbackPtr func, void* value, tasker_count_t prio)
 {
-	for(byte t_idx = 0; t_idx < t_count; t_idx++) {
-		TASK &t = tasks[t_idx];
-		if (t.call == func && t.param == param)
-			return t_idx;
-	}
-	return -1;
+    return addTask((void*)func, 0, 0, value, IS_IMMEDIATE | HAS_PARAM, prio);
 }
 
-bool Tasker::addTask(TaskCallback1 func, unsigned long interval, unsigned int repeat, int param, byte prio)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setTimeout(TaskCallbackPtr func, unsigned long interval, void* value, tasker_count_t prio)
 {
-	byte pos = (prio < t_count) ? prio : t_count;  // position of newly added task is based on priority
-
-	int idx = findTask(func, param);
-	if (idx >= 0) {
-		removeTask(idx);       // if there's a matching task then remove it first
-		pos = idx;             // new task will replace the original one
-	}
-
-	if (t_count >= TASKER_MAX_TASKS || interval == 0)
-		return false;
-
-	if (pos < t_count)
-		memmove(tasks+pos+1, tasks+pos, sizeof(TASK)*(t_count-pos));
-	TASK &t = tasks[pos];
-	t.call = func;
-	t.interval = interval;
-	t.param = param;
-	t.lastRun = millis();
-	t.repeat = repeat;
-	t_count++;
-	return true;
+    return addTask((void*)func, interval, 1, value, HAS_PARAM, prio);
 }
 
-bool Tasker::removeTask(int t_idx)
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setInterval(TaskCallbackPtr func, unsigned long interval, void* value, tasker_count_t prio)
 {
-	if (t_idx >= 0 && t_idx < t_count) {
-		memmove(tasks+t_idx, tasks+t_idx+1, sizeof(TASK)*(t_count-t_idx-1));
-		t_count--;
-		return true;
-	}
-	return false;
+    return addTask((void*)func, interval, 0, value, HAS_PARAM, prio);
 }
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::setRepeated(TaskCallbackPtr func, unsigned long interval, unsigned int repeat, void* value, tasker_count_t prio)
+{
+    return addTask((void*)func, interval, repeat, value, HAS_PARAM, prio);
+}
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::cancel(TaskCallbackPtr func, void* value)
+{
+    return removeTask(findTask(func, value));
+}
+
+template <size_t MAX_TASKS>
+unsigned long TaskerT<MAX_TASKS>::scheduledIn(TaskCallbackPtr func, void* value)
+{
+    return scheduledInImpl(findTask(func, value));
+}
+
+// Returns milliseconds until the task is next due to run:
+//   0 = not scheduled
+//   1 = due immediately (IS_IMMEDIATE or overdue)
+//   X = due in X ms
+template <size_t MAX_TASKS>
+unsigned long TaskerT<MAX_TASKS>::scheduledInImpl(int t_idx)
+{
+    if (t_idx < 0) return 0;
+
+    TASK &t = tasks[t_idx];
+    if (t.flags & IS_IMMEDIATE) return 1;
+
+    unsigned long now = millis();
+    return (now - t.lastRun >= t.interval) ? 1 : (t.lastRun + t.interval - now);
+}
+
+// === Core implementation ===
+
+template <size_t MAX_TASKS>
+void TaskerT<MAX_TASKS>::loop(void)
+{
+    tasker_count_t t_idx = 0;
+    unsigned long now = millis();
+
+    while (t_idx < t_count) {
+        bool inc = true;
+        TASK &t = tasks[t_idx];
+
+        if ((t.flags & IS_IMMEDIATE) || (now - t.lastRun >= t.interval)) {
+            void* the_call = t.call;
+            void* the_param = t.param;
+            uint8_t the_flags = t.flags;
+
+            t.lastRun += t.interval;
+
+            if ((the_flags & IS_IMMEDIATE) || (t.repeat > 0 && --t.repeat == 0)) {
+                // drop the finished task by removing its slot
+                removeTask(t_idx);
+                inc = false;
+            }
+
+            if (the_flags & HAS_PARAM) {
+                if (the_flags & PARAM_IS_INT) {
+                    int value = static_cast<int>(reinterpret_cast<uintptr_t>(the_param));
+                    reinterpret_cast<TaskCallbackInt>(the_call)(value);
+                } else {
+                    reinterpret_cast<TaskCallbackPtr>(the_call)(the_param);
+                }
+            } else {
+                reinterpret_cast<TaskCallback>(the_call)();
+            }
+
+            if (t_prioritized)
+                break;
+
+            now = millis();
+        }
+        if (inc)
+            t_idx++;
+    }
+}
+
+template <size_t MAX_TASKS>
+int TaskerT<MAX_TASKS>::findTask(TaskCallback func)
+{
+    return findTaskImpl((void*)func, nullptr, 0, HAS_PARAM);
+}
+
+template <size_t MAX_TASKS>
+int TaskerT<MAX_TASKS>::findTask(TaskCallbackInt func, int value)
+{
+    void* v = reinterpret_cast<void*>(value);
+    return findTaskImpl((void*)func, v, HAS_PARAM | PARAM_IS_INT, HAS_PARAM | PARAM_IS_INT);
+}
+
+template <size_t MAX_TASKS>
+int TaskerT<MAX_TASKS>::findTask(TaskCallbackPtr func, void* value)
+{
+    return findTaskImpl((void*)func, value, HAS_PARAM, HAS_PARAM);
+}
+
+template <size_t MAX_TASKS>
+int TaskerT<MAX_TASKS>::findTaskImpl(void* func, void* param, uint8_t flags, uint8_t mask)
+{
+    for (tasker_count_t i = 0; i < t_count; i++) {
+        TASK &t = tasks[i];
+        if (t.call == func &&
+            (t.flags & mask) == flags &&
+            ((flags & HAS_PARAM) == 0 || t.param == param))
+            return i;
+    }
+    return -1;
+}
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::addTask(void* func, unsigned long interval, unsigned int repeat,
+                                void* value, uint8_t flags, tasker_count_t prio)
+{
+    tasker_count_t pos = (prio < t_count) ? prio : t_count;  // position of newly added task is based on priority
+
+    uint8_t f = flags & (HAS_PARAM | PARAM_IS_INT);
+    uint8_t m = f ? f : HAS_PARAM;
+    int idx = findTaskImpl(func, f ? value : nullptr, f, m);
+    if (idx >= 0) {
+        removeTask(idx);       // if there's a matching task then remove it first
+        pos = idx;             // new task will replace the original one
+    }
+
+    if (t_count >= MAX_TASKS || (interval == 0 && (flags & IS_IMMEDIATE) == 0))
+        return false;
+
+    if (pos < t_count)
+        memmove(tasks + pos + 1, tasks + pos, sizeof(TASK) * (t_count - pos));
+
+    TASK &t = tasks[pos];
+    t.call     = func;
+    t.param    = value;
+    t.interval = interval;
+    t.lastRun  = (flags & IS_IMMEDIATE) ? 0 : millis();
+    t.repeat   = repeat;
+    t.flags    = flags;
+
+    t_count++;
+    return true;
+}
+
+template <size_t MAX_TASKS>
+bool TaskerT<MAX_TASKS>::removeTask(int t_idx)
+{
+    if (t_idx >= 0 && static_cast<tasker_count_t>(t_idx) < t_count) {
+        tasker_count_t idx = static_cast<tasker_count_t>(t_idx);
+        memmove(tasks + idx, tasks + idx + 1, sizeof(TASK) * (t_count - idx - 1));
+        t_count--;
+        return true;
+    }
+    return false;
+}
+
+// Backward-compatibility alias for 100% source compatibility with old code.
+// Bare "Tasker tasker;" continues to work exactly as before.
+// Use TaskerT<N> when you want to specify a custom number of tasks.
+using Tasker = TaskerT<TASKER_MAX_TASKS>;
 
 #endif // _tasker_h
-// vim: tabstop=4 shiftwidth=4 noexpandtab cindent

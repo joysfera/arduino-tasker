@@ -1,8 +1,10 @@
 Tasker	KEYWORD1
+TaskerT	KEYWORD1
 
 setTimeout	KEYWORD2
 setInterval	KEYWORD2
 setRepeated	KEYWORD2
+setImmediate	KEYWORD2
 cancel	KEYWORD2
 clearTimeout	KEYWORD2
 clearInterval	KEYWORD2
@@ -10,5 +12,10 @@ scheduledIn	KEYWORD2
 loop	KEYWORD2
 isPrioritized	KEYWORD2
 setPrioritized	KEYWORD2
+isFull	KEYWORD2
+count	KEYWORD2
+available	KEYWORD2
+getUserData	KEYWORD2
+setUserData	KEYWORD2
 
 TASKER_MAX_TASKS	LITERAL1

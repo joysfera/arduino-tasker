@@ -4,11 +4,10 @@
  * Released into the public domain
  */
 
-// define max number of tasks to save precious Arduino RAM
-#define TASKER_MAX_TASKS 4
 #include "Tasker.h"
 
-Tasker tasker;
+// use TaskerT<N> for explicit capacity
+TaskerT<4> tasker;   // only 4 tasks max - saves RAM on small boards
 
 /*
  * Example of chaining tasks by calling the setTimeout() from a task
